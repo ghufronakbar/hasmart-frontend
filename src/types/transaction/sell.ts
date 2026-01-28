@@ -1,0 +1,59 @@
+import { BaseResponse } from "../common";
+import { Item, ItemVariant } from "../master/item";
+import { Member } from "../master/member";
+
+export interface SellItem {
+  id: number;
+  transactionSellId: number;
+  masterItemId: number;
+  masterItemVariantId: number;
+  qty: number;
+  sellPrice: number;
+  recordedTotalAmount: number;
+  masterItem?: Item;
+  masterItemVariant?: ItemVariant;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Sell {
+  id: number;
+  invoiceNumber: string;
+  transactionDate: string;
+  dueDate: string;
+  branchId: number;
+  memberCode: string;
+  masterMemberId: number;
+  notes?: string | null;
+  taxPercentage: number;
+  recordedTaxAmount: number;
+  recordedTotalAmount: number;
+  masterMember?: Member;
+  items: SellItem[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface CreateSellItemDTO {
+  masterItemId: number;
+  masterItemVariantId: number;
+  qty: number;
+  sellPrice: number;
+  discounts?: { percentage: number }[];
+}
+
+export interface CreateSellDTO {
+  branchId: number;
+  transactionDate: string;
+  dueDate: string;
+  memberCode: string; // Mandatory for B2B
+  notes?: string | null;
+  taxPercentage?: number;
+  items: CreateSellItemDTO[];
+}
+
+export type UpdateSellDTO = Partial<CreateSellDTO>;
+
+export type SellResponse = BaseResponse<Sell>;
+export type SellListResponse = BaseResponse<Sell[]>;

@@ -1,0 +1,59 @@
+import { BaseResponse } from "../common";
+import { Item, ItemVariant } from "../master/item";
+import { Member } from "../master/member";
+
+export interface SellReturnItem {
+  id: number;
+  transactionSellReturnId: number;
+  masterItemId: number;
+  masterItemVariantId: number;
+  qty: number;
+  sellPrice: number;
+  recordedTotalAmount: number;
+  masterItem?: Item;
+  masterItemVariant?: ItemVariant;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SellReturn {
+  id: number;
+  invoiceNumber: string; // return number (RTG-...)
+  transactionDate: string;
+  dueDate: string;
+  branchId: number;
+  memberCode: string;
+  masterMemberId: number;
+  notes?: string | null;
+  taxPercentage: number;
+  recordedTaxAmount: number;
+  recordedTotalAmount: number;
+  masterMember?: Member;
+  items: SellReturnItem[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface CreateSellReturnItemDTO {
+  masterItemId: number;
+  masterItemVariantId: number;
+  qty: number;
+  sellPrice: number;
+  discounts?: { percentage: number }[];
+}
+
+export interface CreateSellReturnDTO {
+  branchId: number;
+  transactionDate: string;
+  dueDate: string;
+  memberCode: string;
+  notes?: string | null;
+  taxPercentage?: number;
+  items: CreateSellReturnItemDTO[];
+}
+
+export type UpdateSellReturnDTO = Partial<CreateSellReturnDTO>;
+
+export type SellReturnResponse = BaseResponse<SellReturn>;
+export type SellReturnListResponse = BaseResponse<SellReturn[]>;
