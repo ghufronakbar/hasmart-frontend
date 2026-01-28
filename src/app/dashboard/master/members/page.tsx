@@ -124,7 +124,7 @@ export default function MembersPage() {
     const { mutate: deleteMember, isPending: isDeleting } = useDeleteMember();
 
     const form = useForm<MemberFormValues>({
-        resolver: zodResolver(memberSchema),
+        resolver: zodResolver(memberSchema) as any,
         defaultValues: {
             code: "",
             name: "",
@@ -347,7 +347,7 @@ export default function MembersPage() {
                                         <FormItem>
                                             <FormLabel>Kode (Wajib)</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="cth: 6285112345678" {...field} disabled={!!editingMember} />
+                                                <Input placeholder="cth: 6285112345678" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
