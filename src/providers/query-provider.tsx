@@ -30,9 +30,9 @@ export function QueryProvider({ children }: QueryProviderProps) {
                         // Retry failed mutations 0 times
                         retry: 0,
                         onError: (error) => {
-                            if (error instanceof AxiosError) {
-                                toast(typeof error.response?.data?.errors?.message === "string" ? error.response?.data?.errors?.message : "Terjadi kesalahan");
-                            }
+                            // if (error instanceof AxiosError) {
+                            //     toast(typeof error.response?.data?.errors?.message === "string" ? error.response?.data?.errors?.message : "Terjadi kesalahan");
+                            // }
                         },
                     },
                 },

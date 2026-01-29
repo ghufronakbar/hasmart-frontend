@@ -22,7 +22,14 @@ import {
     UserX,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PaginationState } from "@tanstack/react-table";
+import {
+    PaginationState,
+    useReactTable,
+    SortingState,
+    VisibilityState,
+    getCoreRowModel,
+    flexRender,
+} from "@tanstack/react-table";
 import { AxiosError } from "axios";
 
 import { cn } from "@/lib/utils";
@@ -57,13 +64,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+    DataTable,
+} from "@/components/ui/data-table/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import {
     Command,
     CommandEmpty,
@@ -99,6 +102,8 @@ import { memberService } from "@/services/master/member.service";
 import { Member } from "@/types/master/member";
 import { Sell, CreateSellDTO } from "@/types/transaction/sell";
 import { Item, ItemVariant } from "@/types/master/item";
+import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
+import { Combobox } from "@/components/custom/combobox";
 
 // --- Types & Schemas ---
 
@@ -128,134 +133,15 @@ const createSellSchema = z.object({
 type CreateSellFormValues = z.infer<typeof createSellSchema>;
 type SellItemFormValues = z.infer<typeof sellItemSchema>;
 
-// --- Helper Components ---
 
-function DatePickerWithRange({
-    date,
-    setDate,
-    className,
-}: {
-    date: DateRange | undefined;
-    setDate: (date: DateRange | undefined) => void;
-    className?: string;
-}) {
-    return (
-        <div className={cn("grid gap-2", className)}>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        id="date"
-                        variant={"outline"}
-                        className={cn(
-                            "w-[260px] justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date?.from ? (
-                            date.to ? (
-                                <>
-                                    {format(date.from, "LLO", { locale: idLocale })} -{" "}
-                                    {format(date.to, "LLO", { locale: idLocale })}
-                                </>
-                            ) : (
-                                format(date.from, "LLO", { locale: idLocale })
-                            )
-                        ) : (
-                            <span>Pilih Tanggal</span>
-                        )}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={date}
-                        onSelect={setDate}
-                        numberOfMonths={2}
-                        locale={idLocale}
-                    />
-                </PopoverContent>
-            </Popover>
-        </div>
-    );
-}
-
-interface ComboboxItem {
-    id: number;
-    name: string;
-    code?: string;
-}
-
-interface ComboboxProps {
-    value?: number;
-    onChange: (val: number) => void;
-    options?: ComboboxItem[];
-    placeholder?: string;
-    searchPlaceholder?: string;
-    renderLabel?: (item: ComboboxItem) => React.ReactNode;
-    disabled?: boolean;
-}
-
-const Combobox = ({
-    value,
-    onChange,
-    options,
-    placeholder = "Pilih...",
-    searchPlaceholder = "Cari...",
-    renderLabel,
-    disabled = false
-}: ComboboxProps) => {
-    const [open, setOpen] = useState(false);
-    const selected = options?.find((item) => item.id === value);
-    const label = selected ? (renderLabel ? renderLabel(selected) : selected.name) : placeholder;
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between font-normal px-3"
-                    disabled={disabled}
-                >
-                    <span className="truncate">{label}</span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                    <CommandInput placeholder={searchPlaceholder} />
-                    <CommandList>
-                        <CommandEmpty>Tidak ditemukan.</CommandEmpty>
-                        <CommandGroup>
-                            {options?.map((item) => (
-                                <CommandItem
-                                    key={item.id}
-                                    value={`${item.code || ''} ${item.name}`}
-                                    onSelect={() => {
-                                        onChange(item.id);
-                                        setOpen(false);
-                                    }}
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", value === item.id ? "opacity-100" : "opacity-0")} />
-                                    {renderLabel ? renderLabel(item) : item.name}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
 
 export default function SellPage() {
     const { branch } = useBranch();
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+
     const [searchTerm, setSearchTerm] = useState("");
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
     // Date Filter State
@@ -266,6 +152,8 @@ export default function SellPage() {
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: debouncedSearch,
+        sort: sorting[0]?.desc ? "desc" : "asc",
+        sortBy: sorting[0]?.id,
         dateStart: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
@@ -436,6 +324,8 @@ export default function SellPage() {
         return { subTotal, discountTotal, taxAmount: taxVal, grandTotal, itemCalculations };
     }, [watchedItems, watchedTaxPercentage]);
 
+
+
     const onSubmit = (values: CreateSellFormValues) => {
         // Enforce member verification
         if (!memberVerified || memberVerified.code !== values.memberCode) {
@@ -491,7 +381,7 @@ export default function SellPage() {
                 setMemberVerified(sell.masterMember);
             }
 
-            const taxPct = sell.taxPercentage ?? 0;
+            const taxPct = sell.recordedTaxPercentage ?? sell.taxPercentage ?? 0;
 
             const formDataVal = {
                 transactionDate: new Date(sell.transactionDate),
@@ -555,6 +445,87 @@ export default function SellPage() {
         });
     };
 
+    const columns = useMemo(() => [
+        {
+            accessorKey: "transactionDate",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Tanggal" />
+            ),
+            cell: ({ row }: any) => format(new Date(row.original.transactionDate), "dd MMM yyyy", { locale: idLocale }),
+        },
+        {
+            accessorKey: "invoiceNumber",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Invoice" />
+            ),
+            cell: ({ row }: any) => <span className="font-medium">{row.original.invoiceNumber}</span>,
+        },
+        {
+            accessorKey: "masterMember.name",
+            id: "masterMemberName",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Member" />
+            ),
+            cell: ({ row }: any) => (
+                <div className="flex flex-col">
+                    <span>{row.original.memberCode}</span>
+                    <span className="text-xs text-muted-foreground">{row.original.masterMember?.name}</span>
+                </div>
+            ),
+        },
+        {
+            accessorKey: "dueDate",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Jatuh Tempo" />
+            ),
+            cell: ({ row }: any) => row.original.dueDate ? format(new Date(row.original.dueDate), "dd/MM/yyyy") : "-",
+        },
+        {
+            accessorKey: "recordedTotalAmount",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Total" className="text-right" />
+            ),
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+        },
+        {
+            id: "actions",
+            header: () => <div className="text-right">Aksi</div>,
+            cell: ({ row }: any) => {
+                const s = row.original;
+                return (
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(s)}>
+                            <span className="sr-only">Edit</span>
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={() => setDeletingId(s.id)}>
+                            <span className="sr-only">Hapus</span>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                );
+            },
+        },
+    ], []);
+
+    const table = useReactTable({
+        data: sellData?.data || [],
+        columns,
+        state: {
+            pagination,
+            sorting,
+            columnVisibility,
+        },
+        pageCount: sellData?.pagination?.totalPages || -1,
+        onPaginationChange: setPagination,
+        onSortingChange: setSorting,
+        onColumnVisibilityChange: setColumnVisibility,
+        getCoreRowModel: getCoreRowModel(),
+        manualPagination: true,
+        manualSorting: true,
+        manualFiltering: true,
+    });
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -588,63 +559,12 @@ export default function SellPage() {
             </div>
 
             {/* List Table */}
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead>Invoice</TableHead>
-                            <TableHead>Member</TableHead>
-                            <TableHead>Jatuh Tempo</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="animate-spin inline mr-2" /> Loading...</TableCell></TableRow>
-                        ) : sellData?.data?.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24">Tidak ada data.</TableCell></TableRow>
-                        ) : (
-                            sellData?.data?.map((s: Sell) => (
-                                <TableRow key={s.id}>
-                                    <TableCell>{format(new Date(s.transactionDate), "dd MMM yyyy", { locale: idLocale })}</TableCell>
-                                    <TableCell className="font-medium">{s.invoiceNumber}</TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col">
-                                            <span>{s.memberCode}</span>
-                                            <span className="text-xs text-muted-foreground">{s.masterMember?.name}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{s.dueDate ? format(new Date(s.dueDate), "dd/MM/yyyy") : "-"}</TableCell>
-                                    <TableCell className="text-right font-bold">
-                                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(s.recordedTotalAmount)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(s)}>
-                                                <span className="sr-only">Edit</span>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={() => setDeletingId(s.id)}>
-                                                <span className="sr-only">Hapus</span>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            {/* Pagination helper */}
-            <div className="flex items-center justify-end space-x-2 py-4">
-                <Button variant="outline" size="sm" onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex - 1 }))} disabled={pagination.pageIndex === 0}>Previous</Button>
-                <div className="text-sm">Page {pagination.pageIndex + 1} of {sellData?.pagination?.totalPages || 1}</div>
-                <Button variant="outline" size="sm" onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex + 1 }))} disabled={!sellData?.pagination?.hasNextPage}>Next</Button>
-            </div>
+            <DataTable
+                table={table}
+                columnsLength={columns.length}
+                isLoading={isLoading}
+                showSelectedRowCount={false}
+            />
 
 
             {/* Create / Edit Dialog */}
@@ -658,9 +578,6 @@ export default function SellPage() {
                                     {editingId ? "Perbarui informasi penjualan di bawah ini." : "Input detail penjualan grosir ke member."}
                                 </DialogDescription>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={() => setIsCreateOpen(false)}>
-                                <X className="h-4 w-4" />
-                            </Button>
                         </div>
                     </DialogHeader>
 
@@ -878,11 +795,25 @@ export default function SellPage() {
 
                                                     </div>
                                                 );
-                                            })}
-                                            {form.formState.errors.items?.root && (
-                                                <p className="text-sm text-red-500">{form.formState.errors.items.root.message}</p>
-                                            )}
+                                            })
+                                            }
+                                            {
+                                                form.formState.errors.items?.root && (
+                                                    <p className="text-sm text-red-500">{form.formState.errors.items.root.message}</p>
+                                                )
+                                            }
                                         </div>
+
+                                        {/* Create New Item Button when list empty */}
+                                        {fields.length === 0 && (
+                                            <div className="text-center p-8 border border-dashed rounded-lg mt-4 text-muted-foreground">
+                                                Belum ada item barang yang dipilih.
+                                                <br />
+                                                <Button type="button" variant="link" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, sellPrice: 0, discounts: [] })}>
+                                                    + Tambah Item Pertama
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Footer / Totals */}
@@ -925,12 +856,16 @@ export default function SellPage() {
                                                     <span>Grand Total:</span>
                                                     <span>{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(calculations.grandTotal)}</span>
                                                 </div>
-                                                <Button type="submit" className="w-full mt-4" disabled={isCreating || isUpdating}>
-                                                    {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    {editingId ? "Simpan Perubahan" : "Simpan Penjualan"}
-                                                </Button>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-4 border-t">
+                                        <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Batal</Button>
+                                        <Button type="submit" disabled={isCreating || isUpdating}>
+                                            {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            {editingId ? "Simpan Perubahan" : "Simpan Penjualan"}
+                                        </Button>
                                     </div>
                                 </form>
                             </Form>

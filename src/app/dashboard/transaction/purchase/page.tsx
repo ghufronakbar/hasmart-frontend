@@ -23,7 +23,14 @@ import {
     Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PaginationState } from "@tanstack/react-table";
+import {
+    useReactTable,
+    SortingState,
+    VisibilityState,
+    getCoreRowModel,
+    flexRender,
+    PaginationState,
+} from "@tanstack/react-table";
 import { AxiosError } from "axios";
 
 import { cn } from "@/lib/utils";
@@ -58,13 +65,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+    DataTable,
+} from "@/components/ui/data-table/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import {
     Command,
     CommandEmpty,
@@ -126,138 +129,20 @@ const createPurchaseSchema = z.object({
 
 import { Purchase, CreatePurchaseDTO } from "@/types/transaction/purchase";
 import { Item, ItemVariant } from "@/types/master/item";
+import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
+import { Combobox } from "@/components/custom/combobox";
 
 type CreatePurchaseFormValues = z.infer<typeof createPurchaseSchema>;
 type PurchaseItemFormValues = z.infer<typeof purchaseItemSchema>;
 
-// --- Helper Components ---
 
-function DatePickerWithRange({
-    date,
-    setDate,
-    className,
-}: {
-    date: DateRange | undefined;
-    setDate: (date: DateRange | undefined) => void;
-    className?: string;
-}) {
-    return (
-        <div className={cn("grid gap-2", className)}>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        id="date"
-                        variant={"outline"}
-                        className={cn(
-                            "w-[260px] justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date?.from ? (
-                            date.to ? (
-                                <>
-                                    {format(date.from, "LLO", { locale: idLocale })} -{" "}
-                                    {format(date.to, "LLO", { locale: idLocale })}
-                                </>
-                            ) : (
-                                format(date.from, "LLO", { locale: idLocale })
-                            )
-                        ) : (
-                            <span>Pilih Tanggal</span>
-                        )}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={date}
-                        onSelect={setDate}
-                        numberOfMonths={2}
-                        locale={idLocale}
-                    />
-                </PopoverContent>
-            </Popover>
-        </div>
-    );
-}
-
-interface ComboboxItem {
-    id: number;
-    name: string;
-    code?: string;
-}
-
-interface ComboboxProps {
-    value?: number;
-    onChange: (val: number) => void;
-    options?: ComboboxItem[];
-    placeholder?: string;
-    searchPlaceholder?: string;
-    renderLabel?: (item: ComboboxItem) => React.ReactNode;
-    disabled?: boolean;
-}
-
-const Combobox = ({
-    value,
-    onChange,
-    options,
-    placeholder = "Pilih...",
-    searchPlaceholder = "Cari...",
-    renderLabel,
-    disabled = false
-}: ComboboxProps) => {
-    const [open, setOpen] = useState(false);
-    const selected = options?.find((item) => item.id === value);
-    const label = selected ? (renderLabel ? renderLabel(selected) : selected.name) : placeholder;
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between font-normal px-3"
-                    disabled={disabled}
-                >
-                    <span className="truncate">{label}</span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                    <CommandInput placeholder={searchPlaceholder} />
-                    <CommandList>
-                        <CommandEmpty>Tidak ditemukan.</CommandEmpty>
-                        <CommandGroup>
-                            {options?.map((item) => (
-                                <CommandItem
-                                    key={item.id}
-                                    value={`${item.code || ''} ${item.name}`}
-                                    onSelect={() => {
-                                        onChange(item.id);
-                                        setOpen(false);
-                                    }}
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", value === item.id ? "opacity-100" : "opacity-0")} />
-                                    {renderLabel ? renderLabel(item) : item.name}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
 
 export default function PurchasePage() {
     const { branch } = useBranch();
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [searchTerm, setSearchTerm] = useState("");
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
     // Date Filter State
@@ -268,6 +153,8 @@ export default function PurchasePage() {
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: debouncedSearch,
+        sort: sorting[0]?.desc ? "desc" : "asc",
+        sortBy: sorting[0]?.id,
         dateStart: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
@@ -545,6 +432,82 @@ export default function PurchasePage() {
         });
     };
 
+    const columns = useMemo(() => [
+        {
+            accessorKey: "transactionDate",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Tanggal" />
+            ),
+            cell: ({ row }: any) => format(new Date(row.original.transactionDate), "dd MMM yyyy", { locale: idLocale }),
+        },
+        {
+            accessorKey: "invoiceNumber",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Invoice" />
+            ),
+            cell: ({ row }: any) => <span className="font-medium">{row.original.invoiceNumber}</span>,
+        },
+        {
+            accessorKey: "masterSupplier.name",
+            id: "masterSupplierName",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Supplier" />
+            ),
+            cell: ({ row }: any) => row.original.masterSupplier?.name,
+        },
+        {
+            accessorKey: "dueDate",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Jatuh Tempo" />
+            ),
+            cell: ({ row }: any) => row.original.dueDate ? format(new Date(row.original.dueDate), "dd/MM/yyyy") : "-",
+        },
+        {
+            accessorKey: "recordedTotalAmount",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Total" className="text-right" />
+            ),
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+        },
+        {
+            id: "actions",
+            header: () => <div className="text-right">Aksi</div>,
+            cell: ({ row }: any) => {
+                const p = row.original;
+                return (
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(p)}>
+                            <span className="sr-only">Edit</span>
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={() => setDeletingId(p.id)}>
+                            <span className="sr-only">Hapus</span>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                );
+            },
+        },
+    ], []);
+
+    const table = useReactTable({
+        data: purchaseData?.data || [],
+        columns,
+        state: {
+            pagination,
+            sorting,
+            columnVisibility,
+        },
+        pageCount: purchaseData?.pagination?.totalPages || -1,
+        onPaginationChange: setPagination,
+        onSortingChange: setSorting,
+        onColumnVisibilityChange: setColumnVisibility,
+        getCoreRowModel: getCoreRowModel(),
+        manualPagination: true,
+        manualSorting: true,
+        manualFiltering: true,
+    });
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -578,58 +541,12 @@ export default function PurchasePage() {
             </div>
 
             {/* List Table */}
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead>Invoice</TableHead>
-                            <TableHead>Supplier</TableHead>
-                            <TableHead>Jatuh Tempo</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="animate-spin inline mr-2" /> Loading...</TableCell></TableRow>
-                        ) : purchaseData?.data?.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24">Tidak ada data.</TableCell></TableRow>
-                        ) : (
-                            purchaseData?.data?.map((p: Purchase) => (
-                                <TableRow key={p.id}>
-                                    <TableCell>{format(new Date(p.transactionDate), "dd MMM yyyy", { locale: idLocale })}</TableCell>
-                                    <TableCell className="font-medium">{p.invoiceNumber}</TableCell>
-                                    <TableCell>{p.masterSupplier?.name}</TableCell>
-                                    <TableCell>{p.dueDate ? format(new Date(p.dueDate), "dd/MM/yyyy") : "-"}</TableCell>
-                                    <TableCell className="text-right font-bold">
-                                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(p.recordedTotalAmount)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(p)}>
-                                                <span className="sr-only">Edit</span>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={() => setDeletingId(p.id)}>
-                                                <span className="sr-only">Hapus</span>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            {/* Pagination helper can be extracted, reusing manual for simplicity */}
-            <div className="flex items-center justify-end space-x-2 py-4">
-                <Button variant="outline" size="sm" onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex - 1 }))} disabled={pagination.pageIndex === 0}>Previous</Button>
-                <div className="text-sm">Page {pagination.pageIndex + 1} of {purchaseData?.pagination?.totalPages || 1}</div>
-                <Button variant="outline" size="sm" onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex + 1 }))} disabled={!purchaseData?.pagination?.hasNextPage}>Next</Button>
-            </div>
+            <DataTable
+                table={table}
+                columnsLength={columns.length}
+                isLoading={isLoading}
+                showSelectedRowCount={false}
+            />
 
 
             {/* Create / Edit Dialog */}

@@ -1,48 +1,56 @@
-import { BaseResponse } from "../common";
-import { Branch } from "../app/branch";
-import { Item, ItemVariant } from "../master/item";
+import { BaseResponse } from "@/types/common";
+import { Branch } from "@/types/app/branch";
+import { Item, ItemVariant } from "@/types/master/item";
 
-export interface TransferItem {
+export interface TransactionTransferItem {
   id: number;
   transactionTransferId: number;
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
-  masterItem?: Item;
-  masterItemVariant?: ItemVariant;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Transfer {
-  id: number;
-  transactionDate: string;
-  fromId: number;
-  toId: number;
-  notes?: string | null;
-  fromBranch?: Branch;
-  toBranch?: Branch;
-  items: TransferItem[];
+  recordedConversion: number;
+  totalQty: number;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+
+  // Relations
+  masterItem?: Item;
+  masterItemVariant?: ItemVariant;
 }
 
-export interface CreateTransferItemDTO {
+export interface TransactionTransfer {
+  id: number;
+  transactionDate: string;
+  notes?: string;
+  fromId: number;
+  toId: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+
+  // Relations
+  from?: Branch;
+  to?: Branch;
+  transactionTransferItems?: TransactionTransferItem[];
+}
+
+export interface CreateTransactionTransferItemDTO {
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
 }
 
-export interface CreateTransferDTO {
-  transactionDate: string;
+export interface CreateTransactionTransferDTO {
+  transactionDate: Date;
   fromId: number;
   toId: number;
-  notes?: string | null;
-  items: CreateTransferItemDTO[];
+  notes?: string;
+  items: CreateTransactionTransferItemDTO[];
 }
 
-export type UpdateTransferDTO = Partial<CreateTransferDTO>;
+export type UpdateTransactionTransferDTO =
+  Partial<CreateTransactionTransferDTO>;
 
-export type TransferResponse = BaseResponse<Transfer>;
-export type TransferListResponse = BaseResponse<Transfer[]>;
+export type TransactionTransferResponse = BaseResponse<TransactionTransfer>;
+export type TransactionTransfersResponse = BaseResponse<TransactionTransfer[]>;

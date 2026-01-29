@@ -1,8 +1,829 @@
+"use client";
+
+import { useMemo, useState, useEffect } from "react";
+import { useForm, useFieldArray, useWatch, Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import { DateRange } from "react-day-picker";
+import {
+    Loader2,
+    Plus,
+    Calendar as CalendarIcon,
+    Search,
+    Trash2,
+    CirclePlus,
+    X,
+    ChevronsUpDown,
+    Check,
+    Pencil,
+    UserCheck,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+    PaginationState,
+    useReactTable,
+    SortingState,
+    VisibilityState,
+    getCoreRowModel,
+    flexRender,
+} from "@tanstack/react-table";
+import { AxiosError } from "axios";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    DataTable,
+} from "@/components/ui/data-table/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+
+import {
+    useSalesReturns,
+    useSalesReturn,
+    useCreateSalesReturn,
+    useUpdateSalesReturn,
+    useDeleteSalesReturn,
+} from "@/hooks/transaction/use-sales-return";
+import { useSalesList } from "@/hooks/transaction/use-sales";
+import { useItems } from "@/hooks/master/use-item";
+import { useBranch } from "@/providers/branch-provider";
+import { useDebounce } from "@/hooks/use-debounce";
+
+import { SalesReturn, CreateSalesReturnDTO } from "@/types/transaction/sales-return";
+import { Sales } from "@/types/transaction/sales";
+import { Item, ItemVariant } from "@/types/master/item";
+import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
+import { Combobox } from "@/components/custom/combobox";
+
+// --- Types & Schemas ---
+
+const discountSchema = z.object({
+    percentage: z.coerce.number().min(0).max(100),
+});
+
+const salesReturnItemSchema = z.object({
+    masterItemId: z.coerce.number().min(1, "Item wajib"),
+    masterItemVariantId: z.coerce.number().min(1, "Variant wajib"),
+    qty: z.coerce.number().min(1, "Qty minimal 1"),
+    salesPrice: z.coerce.number().min(0, "Harga jual minimal 0"),
+    discounts: z.array(discountSchema).optional(),
+});
+
+const createSalesReturnSchema = z.object({
+    transactionDate: z.date(),
+    branchId: z.coerce.number().min(1, "Branch wajib"),
+    originalInvoiceNumber: z.string().min(1, "Invoice Asli wajib dipilih"),
+    notes: z.string().optional(),
+    items: z.array(salesReturnItemSchema).min(1, "Minimal 1 item"),
+});
+
+type CreateSalesReturnFormValues = z.infer<typeof createSalesReturnSchema>;
+type SalesReturnItemFormValues = z.infer<typeof salesReturnItemSchema>;
+
+
 export default function SalesReturnPage() {
+    const { branch } = useBranch();
+    const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const debouncedSearch = useDebounce(searchTerm, 500);
+
+    // Date Filter State
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+    // --- Queries ---
+    const { data: salesReturnData, isLoading } = useSalesReturns({
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+        search: debouncedSearch,
+        sort: sorting[0]?.desc ? "desc" : "asc",
+        sortBy: sorting[0]?.id,
+        dateStart: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+        dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+    });
+
+    const { data: items } = useItems({ limit: 1000 });
+
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const { data: salesReturnDetail, isLoading: isLoadingDetail } = useSalesReturn(editingId);
+
+    // Merge list items with detail items
+    const itemOptions = useMemo(() => {
+        const listItems = items?.data || [];
+        if (!editingId || !salesReturnDetail?.data) return listItems;
+
+        const detailItems = salesReturnDetail.data.transactionSalesReturnItems?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
+
+        // Use Map to deduplicate by ID
+        const map = new Map();
+
+        // Add detail items first (they might lack variants)
+        detailItems.forEach(i => {
+            if (i && i.id) map.set(i.id, i);
+        });
+
+        // Overwrite with list items (they have variants)
+        listItems.forEach(i => map.set(i.id, i));
+
+        return Array.from(map.values());
+    }, [items?.data, salesReturnDetail, editingId]);
+
+    const { mutate: createSalesReturn, isPending: isCreating } = useCreateSalesReturn();
+    const { mutate: updateSalesReturn, isPending: isUpdating } = useUpdateSalesReturn();
+    const { mutate: deleteSalesReturn, isPending: isDeleting } = useDeleteSalesReturn();
+
+    const [invoiceSearch, setInvoiceSearch] = useState("");
+    const debouncedInvoiceSearch = useDebounce(invoiceSearch, 500);
+    const { data: salesData } = useSalesList({ search: debouncedInvoiceSearch, limit: 20 });
+
+    // Derived selected invoice data
+    const [selectedInvoice, setSelectedInvoice] = useState<Partial<Sales> | null>(null);
+
+    // --- Create Form ---
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+    // Reset editingId when dialog closes
+    const handleOpenChange = (open: boolean) => {
+        setIsCreateOpen(open);
+        if (!open) {
+            setEditingId(null);
+            setSelectedInvoice(null);
+            form.reset({ branchId: branch?.id, transactionDate: new Date(), items: [], originalInvoiceNumber: "" });
+        }
+    };
+
+    const form = useForm<CreateSalesReturnFormValues>({
+        resolver: zodResolver(createSalesReturnSchema) as Resolver<CreateSalesReturnFormValues>,
+        defaultValues: {
+            transactionDate: new Date(),
+            branchId: branch?.id || 0,
+            notes: "",
+            items: [],
+            originalInvoiceNumber: "",
+        },
+    });
+
+    // Ensure branchId is set when branch context loads
+    useEffect(() => {
+        if (branch?.id) form.setValue("branchId", branch.id);
+    }, [branch, form]);
+
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "items",
+    });
+
+    const watchedItems = useWatch({ control: form.control, name: "items" }) as SalesReturnItemFormValues[];
+
+    // Handle Invoice Selection
+    const handleInvoiceSelect = (invoiceNumber: string) => {
+        // Find the invoice in the list
+        const invoice = salesData?.data?.find(s => s.invoiceNumber === invoiceNumber);
+
+        if (invoice) {
+            form.setValue("originalInvoiceNumber", invoiceNumber);
+            setSelectedInvoice(invoice);
+            toast.success(`Invoice dipilih`);
+        } else {
+            form.setValue("originalInvoiceNumber", invoiceNumber);
+        }
+    };
+
+    // Helper to add/remove/update discounts manually
+    const addDiscount = (itemIndex: number) => {
+        const currentItems = form.getValues("items") as SalesReturnItemFormValues[];
+        const currentDiscounts = currentItems[itemIndex].discounts || [];
+        form.setValue(`items.${itemIndex}.discounts`, [...currentDiscounts, { percentage: 0 }]);
+    };
+
+    const removeDiscount = (itemIndex: number, discountIndex: number) => {
+        const currentItems = form.getValues("items") as SalesReturnItemFormValues[];
+        const currentDiscounts = currentItems[itemIndex].discounts || [];
+        const newDiscounts = currentDiscounts.filter((_, i) => i !== discountIndex);
+        form.setValue(`items.${itemIndex}.discounts`, newDiscounts);
+    };
+
+    const updateDiscount = (itemIndex: number, discountIndex: number, val: string) => {
+        const currentItems = form.getValues("items") as SalesReturnItemFormValues[];
+        const currentDiscounts = currentItems[itemIndex].discounts || [];
+        const newDiscounts = [...currentDiscounts];
+        newDiscounts[discountIndex] = { percentage: parseFloat(val) || 0 };
+        form.setValue(`items.${itemIndex}.discounts`, newDiscounts);
+    };
+
+    // --- Calculations ---
+    const calculations = useMemo(() => {
+        let subTotal = 0;
+        let discountTotal = 0;
+
+        const itemCalculations = watchedItems?.map(item => {
+            const qty = Number(item.qty) || 0;
+            const price = Number(item.salesPrice) || 0;
+            let itemTotal = qty * price;
+            let currentDiscount = 0;
+
+            // Cascading discount
+            if (item.discounts && item.discounts.length > 0) {
+                item.discounts.forEach(d => {
+                    const paramsPct = Number(d.percentage) || 0;
+                    const discAmount = itemTotal * (paramsPct / 100);
+                    currentDiscount += discAmount;
+                    itemTotal -= discAmount;
+                });
+            }
+
+            return {
+                netTotal: itemTotal,
+                discountAmount: currentDiscount
+            };
+        });
+
+        watchedItems?.forEach((item, index) => {
+            const qty = Number(item.qty) || 0;
+            const price = Number(item.salesPrice) || 0;
+            subTotal += (qty * price);
+            if (itemCalculations?.[index]) {
+                discountTotal += itemCalculations[index].discountAmount;
+            }
+        });
+
+        const taxableAmount = subTotal - discountTotal;
+        // Sales/Sales return typically includes tax in price or separate? B2B has explicit taxPercentage. 
+        // SalesReturn schema (CreateSalesReturnDTO) does NOT have taxPercentage field in view_file Step 2963.
+        // So we assume tax is handled by backend or included.
+        const grandTotal = taxableAmount;
+
+        return { subTotal, discountTotal, grandTotal, itemCalculations };
+    }, [watchedItems]);
+
+
+
+    const onSubmit = (values: CreateSalesReturnFormValues) => {
+        const payload: CreateSalesReturnDTO = {
+            ...values,
+        };
+
+        if (editingId) {
+            updateSalesReturn({ id: editingId, data: payload }, {
+                onSuccess: () => {
+                    handleOpenChange(false);
+                    toast.success("Retur Penjualan (Kasir) berhasil diperbarui");
+                },
+                onError: (err) => {
+                    const error = err as AxiosError<{ errors?: { message?: string }, message?: string }>;
+                    toast.error(error.response?.data?.errors?.message || error.response?.data?.message || "Gagal memperbarui retur penjualan");
+                }
+            });
+        } else {
+            createSalesReturn(payload, {
+                onSuccess: () => {
+                    handleOpenChange(false);
+                    toast.success("Retur Penjualan (Kasir) berhasil dibuat");
+                },
+                onError: (err) => {
+                    const error = err as AxiosError<{ errors?: { message?: string }, message?: string }>;
+                    toast.error(error.response?.data?.errors?.message || error.response?.data?.message || "Gagal membuat retur penjualan");
+                }
+            });
+        }
+    };
+
+    const handleEdit = (salesReturn: SalesReturn) => {
+        setEditingId(salesReturn.id);
+        setIsCreateOpen(true);
+    };
+
+    // Populate form when detail data arrives
+    useEffect(() => {
+        if (editingId && salesReturnDetail?.data) {
+            const salesReturn = salesReturnDetail.data;
+            const currentItems = salesReturn.transactionSalesReturnItems || [];
+
+            // Set selected invoice info
+            setSelectedInvoice({
+                invoiceNumber: salesReturn.transactionSales?.invoiceNumber,
+                transactionDate: "...",
+            });
+
+            const formDataVal = {
+                transactionDate: new Date(salesReturn.createdAt),
+                branchId: salesReturn.branchId,
+                originalInvoiceNumber: salesReturn.transactionSales?.invoiceNumber || "",
+                notes: salesReturn.notes || "",
+                items: currentItems.map(item => ({
+                    masterItemId: item.masterItemId,
+                    masterItemVariantId: item.masterItemVariantId,
+                    qty: item.qty,
+                    salesPrice: item.salesPrice || 0,
+                    discounts: item.transactionSalesReturnDiscounts?.map(d => ({ percentage: d.percentage })) || []
+                }))
+            };
+            form.reset(formDataVal);
+        }
+    }, [editingId, salesReturnDetail, form]);
+
+    // --- Item Selection Logic ---
+    const handleItemSelect = (index: number, itemId: number) => {
+        const item = items?.data?.find(i => i.id === itemId);
+        if (item && item.masterItemVariants?.length > 0) {
+            form.setValue(`items.${index}.masterItemId`, itemId);
+            form.setValue(`items.${index}.masterItemVariantId`, 0); // Reset variant
+            form.setValue(`items.${index}.salesPrice`, 0);
+            form.setValue(`items.${index}.discounts`, []);
+        }
+    };
+
+    const handleVariantSelect = (index: number, variantId: number) => {
+        form.setValue(`items.${index}.masterItemVariantId`, variantId);
+        // If variant has price, set it
+        const itemId = form.getValues(`items.${index}.masterItemId`);
+        const item = items?.data?.find(i => i.id === itemId);
+        const variant = item?.masterItemVariants?.find(v => v.id === variantId);
+        if (variant && variant.sellPrice) {
+            // Note: ItemVariant has 'sellPrice'. Is it same for Sales (Kasir)?
+            // Usually yes.
+            form.setValue(`items.${index}.salesPrice`, variant.sellPrice);
+        }
+    };
+
+    // Delete Logic
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const handleDelete = () => {
+        if (!deletingId) return;
+        deleteSalesReturn(deletingId, {
+            onSuccess: () => {
+                setDeletingId(null);
+                toast.success("Retur Penjualan dihapus");
+            },
+            onError: (err) => {
+                const error = err as AxiosError<{ message?: string }>;
+                toast.error(error.response?.data?.message || "Gagal menghapus retur penjualan");
+            }
+        });
+    };
+
+    const columns = useMemo(() => [
+        {
+            accessorKey: "createdAt",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Tanggal" />
+            ),
+            cell: ({ row }: any) => {
+                const date = new Date(row.original.createdAt);
+                return !isNaN(date.getTime()) ? format(date, "dd MMM yyyy", { locale: idLocale }) : "-";
+            },
+        },
+        {
+            accessorKey: "returnNumber",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="No. Retur" />
+            ),
+            cell: ({ row }: any) => <span className="font-medium">{row.original.returnNumber}</span>,
+        },
+        {
+            accessorKey: "transactionSales.invoiceNumber",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Invoice Asli" />
+            ),
+            cell: ({ row }: any) => <span className="text-muted-foreground">{row.original.transactionSales?.invoiceNumber}</span>,
+        },
+        {
+            accessorKey: "recordedTotalAmount",
+            header: ({ column }: any) => (
+                <DataTableColumnHeader column={column} title="Total" className="text-right" />
+            ),
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+        },
+        {
+            id: "actions",
+            header: () => <div className="text-right">Aksi</div>,
+            cell: ({ row }: any) => {
+                const s = row.original;
+                return (
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(s)}>
+                            <span className="sr-only">Edit</span>
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={() => setDeletingId(s.id)}>
+                            <span className="sr-only">Hapus</span>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                );
+            },
+        },
+    ], []);
+
+    const table = useReactTable({
+        data: salesReturnData?.data || [],
+        columns,
+        state: {
+            pagination,
+            sorting,
+            columnVisibility,
+        },
+        pageCount: salesReturnData?.pagination?.totalPages || -1,
+        onPaginationChange: setPagination,
+        onSortingChange: setSorting,
+        onColumnVisibilityChange: setColumnVisibility,
+        getCoreRowModel: getCoreRowModel(),
+        manualPagination: true,
+        manualSorting: true,
+        manualFiltering: true,
+    });
+
     return (
-        <div>
-            <h1 className="text-2xl font-bold">Sales Return</h1>
-            <p>Manage sales returns here.</p>
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold tracking-tight">Retur Penjualan (Kasir)</h2>
+                <Button onClick={() => handleOpenChange(true)}>
+                    <Plus className="mr-2 h-4 w-4" /> Retur Baru
+                </Button>
+            </div>
+
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-[250px]">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Cari No. Retur / Invoice..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-8"
+                        />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+                    {dateRange && (
+                        <Button variant="ghost" size="icon" onClick={() => setDateRange(undefined)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {/* List Table */}
+            <DataTable
+                table={table}
+                columnsLength={columns.length}
+                isLoading={isLoading}
+                showSelectedRowCount={false}
+            />
+
+
+            {/* Create / Edit Dialog */}
+            <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
+                <DialogContent className="max-w-[80vw]! w-full h-[95vh] flex flex-col p-0 gap-0">
+                    <DialogHeader className="p-6 pb-2 border-b shrink-0">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <DialogTitle>{editingId ? "Edit Retur Penjualan (Kasir)" : "Buat Retur Penjualan Baru (Kasir)"}</DialogTitle>
+                                <DialogDescription>
+                                    {editingId ? "Perbarui informasi retur penjualan di bawah ini." : "Input detail retur penjualan dari pelanggan."}
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    {editingId && isLoadingDetail ? (
+                        <div className="flex items-center justify-center h-full">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                            <span className="ml-2">Memuat data transaksi...</span>
+                        </div>
+                    ) : (
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                                    {/* Header Info */}
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-4 border rounded-lg bg-slate-50">
+                                        {/* Invoice Selection Section */}
+                                        <div className="col-span-2">
+                                            <FormField control={form.control} name="originalInvoiceNumber" render={({ field }) => (
+                                                <FormItem className="flex flex-col">
+                                                    <FormLabel>No. Invoice Penjualan Asli</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    role="combobox"
+                                                                    className={cn(
+                                                                        "w-full justify-between",
+                                                                        !field.value && "text-muted-foreground"
+                                                                    )}
+                                                                    disabled={!!editingId}
+                                                                >
+                                                                    {field.value
+                                                                        ? field.value
+                                                                        : "Cari Invoice..."}
+                                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                            <Command shouldFilter={false}>
+                                                                <CommandInput
+                                                                    placeholder="Cari No. Invoice..."
+                                                                    value={invoiceSearch}
+                                                                    onValueChange={setInvoiceSearch}
+                                                                />
+                                                                <CommandList>
+                                                                    <CommandEmpty>Tidak ditemukan.</CommandEmpty>
+                                                                    <CommandGroup>
+                                                                        {salesData?.data?.map((sale) => (
+                                                                            <CommandItem
+                                                                                value={sale.invoiceNumber}
+                                                                                key={sale.id}
+                                                                                onSelect={() => {
+                                                                                    handleInvoiceSelect(sale.invoiceNumber);
+                                                                                }}
+                                                                            >
+                                                                                <Check
+                                                                                    className={cn(
+                                                                                        "mr-2 h-4 w-4",
+                                                                                        sale.invoiceNumber === field.value
+                                                                                            ? "opacity-100"
+                                                                                            : "opacity-0"
+                                                                                    )}
+                                                                                />
+                                                                                <div className="flex flex-col">
+                                                                                    <span>{sale.invoiceNumber}</span>
+                                                                                    <span className="text-xs text-muted-foreground">
+                                                                                        {!isNaN(new Date(sale.transactionDate).getTime()) ? format(new Date(sale.transactionDate), 'dd/MM/yyyy') : '-'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </CommandItem>
+                                                                        ))}
+                                                                    </CommandGroup>
+                                                                </CommandList>
+                                                            </Command>
+                                                        </PopoverContent>
+                                                    </Popover>
+
+                                                    {selectedInvoice ? (
+                                                        <div className="text-sm text-green-600 flex items-center mt-1">
+                                                            <UserCheck className="h-3 w-3 mr-1" />
+                                                            Invoice Terverifikasi
+                                                        </div>
+                                                    ) : (
+                                                        <FormMessage />
+                                                    )}
+                                                </FormItem>
+                                            )} />
+                                        </div>
+
+                                        <FormField control={form.control} name="transactionDate" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Tgl Retur</FormLabel>
+                                                <FormControl>
+                                                    <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={e => field.onChange(new Date(e.target.value))} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+
+                                        <div className="md:col-span-4">
+                                            <FormField control={form.control} name="notes" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Catatan</FormLabel>
+                                                    <FormControl><Textarea placeholder="Alasan retur / keterangan..." {...field} className="h-20" /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        </div>
+                                    </div>
+
+                                    <Separator />
+
+                                    {/* Items Section */}
+                                    <div>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-lg font-semibold">Item Barang yang Diretur</h3>
+                                            <Button type="button" size="sm" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, salesPrice: 0, discounts: [] })}>
+                                                <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
+                                            </Button>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {fields.map((field, index) => {
+                                                const currentItem = watchedItems?.[index] || {};
+                                                const selectedItemId = currentItem.masterItemId;
+                                                const selectedItem = itemOptions.find(i => i.id === selectedItemId);
+                                                const variants = selectedItem?.masterItemVariants || [];
+                                                const currentDiscounts = currentItem.discounts || [];
+
+                                                return (
+                                                    <div key={field.id} className="grid grid-cols-12 gap-4 items-start border p-4 rounded-lg bg-muted/10 relative">
+                                                        <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-red-500" onClick={() => remove(index)}>
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+
+                                                        {/* Item Selection */}
+                                                        <div className="col-span-4">
+                                                            <FormField control={form.control} name={`items.${index}.masterItemId`} render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel className="text-xs">Barang</FormLabel>
+                                                                    <Combobox
+                                                                        value={field.value}
+                                                                        onChange={(val) => handleItemSelect(index, val)}
+                                                                        options={itemOptions}
+                                                                        placeholder="Pilih Barang"
+                                                                        renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
+                                                                    />
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
+
+                                                        {/* Variant */}
+                                                        <div className="col-span-2">
+                                                            <FormField control={form.control} name={`items.${index}.masterItemVariantId`} render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel className="text-xs">Variant</FormLabel>
+                                                                    <Select
+                                                                        onValueChange={(val) => handleVariantSelect(index, parseInt(val))}
+                                                                        value={field.value?.toString() !== "0" ? field.value?.toString() : undefined}
+                                                                        disabled={!selectedItemId}
+                                                                    >
+                                                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih Variant" /></SelectTrigger></FormControl>
+                                                                        <SelectContent>
+                                                                            {variants.map((v: ItemVariant) => (
+                                                                                <SelectItem key={v.id} value={v.id.toString()}>
+                                                                                    {v.code} - {v.unit}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
+
+                                                        {/* Qty */}
+                                                        <div className="col-span-1">
+                                                            <FormField control={form.control} name={`items.${index}.qty`} render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel className="text-xs">Qty</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input type="number" min="1" {...field} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
+
+                                                        {/* Price */}
+                                                        <div className="col-span-2">
+                                                            <FormField control={form.control} name={`items.${index}.salesPrice`} render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel className="text-xs">Harga Referensi</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input type="number" min="0" {...field} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
+
+                                                        {/* Discounts */}
+                                                        <div className="col-span-3">
+                                                            <div className="flex flex-col gap-2">
+                                                                <FormLabel className="text-xs">Diskon Bertingkat (%)</FormLabel>
+                                                                {currentDiscounts.map((_, dIndex) => (
+                                                                    <div key={dIndex} className="flex items-center gap-1">
+                                                                        <Input
+                                                                            className="h-8 text-xs"
+                                                                            placeholder="%"
+                                                                            value={currentDiscounts[dIndex]?.percentage || 0}
+                                                                            onChange={(e) => updateDiscount(index, dIndex, e.target.value)}
+                                                                        />
+                                                                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => removeDiscount(index, dIndex)}>
+                                                                            <X className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                ))}
+                                                                <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => addDiscount(index)}>
+                                                                    <Plus className="h-3 w-3 mr-1" /> Add Disc
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Subtotal Display */}
+                                                        <div className="col-span-12 text-right text-xs text-muted-foreground pt-2 border-t mt-2">
+                                                            Subtotal: {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(calculations.itemCalculations?.[index]?.netTotal || 0)}
+                                                            {calculations.itemCalculations?.[index]?.discountAmount ? <span className="text-red-500 ml-2">(-{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(calculations.itemCalculations[index].discountAmount)})</span> : ""}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="mt-8 flex justify-end">
+                                            <div className="w-full md:w-1/3 space-y-2">
+                                                <div className="flex justify-between text-muted-foreground">
+                                                    <span>Subtotal</span>
+                                                    <span>{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(calculations.subTotal)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-red-600">
+                                                    <span>Total Diskon</span>
+                                                    <span>-{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(calculations.discountTotal)}</span>
+                                                </div>
+                                                <Separator />
+                                                <div className="flex justify-between font-bold text-lg">
+                                                    <span>Total</span>
+                                                    <span>{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(calculations.grandTotal)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 mt-8">
+                                            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isCreating || isUpdating}>Batal</Button>
+                                            <Button type="submit" disabled={isCreating || isUpdating}>
+                                                {isCreating || isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                                Simpan
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </Form>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Alert Dialog for Delete */}
+            <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Apakah anda yakin?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Data retur penjualan ini akan dihapus permanen. Stok barang akan dikembalikan (dikurangi).
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700" disabled={isDeleting}>
+                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Hapus
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

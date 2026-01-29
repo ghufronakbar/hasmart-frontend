@@ -1,44 +1,60 @@
-import { BaseResponse } from "../common";
-import { Item, ItemVariant } from "../master/item";
+import { BaseResponse } from "@/types/common";
+import { Branch } from "@/types/app/branch";
+import { Item, ItemVariant } from "@/types/master/item";
 
-export interface AdjustStockItem {
+export interface TransactionAdjustmentItem {
   id: number;
   transactionAdjustmentId: number;
   masterItemId: number;
   masterItemVariantId: number;
+  qty: number; // Actual Qty (input by user)
+  recordedConversion: number;
+  totalQty: number; // qty * conversion
   currentStock: number;
-  actualQty: number;
   gapAmount: number;
-  notes?: string | null;
-  masterItem?: Item;
-  masterItemVariant?: ItemVariant;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AdjustStock {
-  id: number;
-  transactionDate: string;
-  branchId: number;
-  notes?: string | null;
-  items: AdjustStockItem[];
+  notes?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+
+  // Relations
+  masterItem?: Item;
+  masterItemVariant?: ItemVariant;
 }
 
-export interface AdjustStockItemDTO {
+export interface TransactionAdjustment {
+  id: number;
+  notes?: string;
+  masterItemId: number;
+  masterItemVariantId: number;
+  gapAmount: number;
+  recordedGapConversion: number;
+  totalGapAmount: number;
+  branchId: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+
+  // Relations
+  branch?: Branch;
+  masterItem?: Item;
+  masterItemVariant?: ItemVariant;
+}
+
+export interface CreateTransactionAdjustmentItemDTO {
   masterItemId: number;
   masterItemVariantId: number;
   actualQty: number;
 }
 
-export interface CreateAdjustStockDTO {
+export interface CreateTransactionAdjustmentDTO {
   branchId: number;
-  notes?: string | null;
-  items: AdjustStockItemDTO[];
+  transactionDate: Date;
+  notes?: string;
+  items: CreateTransactionAdjustmentItemDTO[];
 }
 
-export type AdjustStockResponse = BaseResponse<AdjustStock[]>; // Returns array of created adjustments
-export type AdjustStockListResponse = BaseResponse<AdjustStock[]>;
-export type AdjustStockDetailResponse = BaseResponse<AdjustStock>;
+export type TransactionAdjustmentResponse = BaseResponse<TransactionAdjustment>;
+export type TransactionAdjustmentListResponse = BaseResponse<
+  TransactionAdjustment[]
+>;

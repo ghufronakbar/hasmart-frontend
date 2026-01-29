@@ -20,6 +20,26 @@ export const sellReturnService = {
     const response = await axiosInstance.get<SellReturnResponse>(
       `/transaction/sell-return/${id}`,
     );
+    // Map backend response to frontend model
+    if (response.data && response.data.data) {
+      const d = response.data
+        .data as import("@/types/transaction/sell-return").SellReturn & {
+        transactionSellReturnItems?: import("@/types/transaction/sell-return").SellReturnItem[];
+      };
+      if (d.transactionSellReturnItems && (!d.items || d.items.length === 0)) {
+        d.items = d.transactionSellReturnItems.map((item) => ({
+          ...item,
+          discounts:
+            (
+              item as unknown as {
+                transactionSellReturnDiscounts?: { percentage: number }[];
+              }
+            ).transactionSellReturnDiscounts ||
+            item.discounts ||
+            [],
+        }));
+      }
+    }
     return response.data;
   },
 

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Database, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, Database, FileText, Settings, ShoppingBasketIcon } from "lucide-react";
 
 export type MenuItem = {
     title: string;
@@ -12,6 +12,11 @@ export const menuItems: MenuItem[] = [
         title: "Dasbor",
         href: "/dashboard/overview",
         icon: <LayoutDashboard className="h-4 w-4" />,
+    },
+    {
+        title: "Point of Sales",
+        href: "/dashboard/point-of-sales",
+        icon: <ShoppingBasketIcon className="h-4 w-4" />,
     },
     {
         title: "Aplikasi",

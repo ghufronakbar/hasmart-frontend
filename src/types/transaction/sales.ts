@@ -12,6 +12,11 @@ export interface SalesItem {
   recordedTotalAmount: number;
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
+  transactionSalesDiscounts?: {
+    id: number;
+    percentage: number;
+    recordedAmount: number;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +32,7 @@ export interface Sales {
   recordedTotalAmount: number;
   masterMember?: Member;
   items: SalesItem[];
+  transactionSalesItems?: SalesItem[]; // Backend relation name
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

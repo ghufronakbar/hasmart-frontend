@@ -1,8 +1,592 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import { DateRange } from "react-day-picker";
+import {
+    Loader2,
+    Plus,
+    Calendar as CalendarIcon,
+    Search,
+    Trash2,
+    CirclePlus,
+    X,
+    Eye,
+    ChevronsUpDown,
+    Check,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+    ColumnDef,
+    flexRender,
+    getCoreRowModel,
+    useReactTable,
+    SortingState,
+    VisibilityState,
+    PaginationState,
+} from "@tanstack/react-table";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+
+
+import {
+    useAdjustStocks,
+    useAdjustStock,
+    useCreateAdjustStock,
+    useDeleteAdjustStock,
+} from "@/hooks/transaction/use-adjust-stock";
+import { useItems } from "@/hooks/master/use-item";
+import { useBranch } from "@/providers/branch-provider";
+import { useDebounce } from "@/hooks/use-debounce";
+import { TransactionAdjustment } from "@/types/transaction/adjust-stock";
+import { Item, ItemVariant } from "@/types/master/item";
+import { DataTable } from "@/components/ui/data-table/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
+import { DataTableToolbar } from "@/components/ui/data-table/data-table-toolbar";
+import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
+import { Combobox } from "@/components/custom/combobox";
+
+// --- Types & Schemas ---
+
+const createAdjustStockSchema = z.object({
+    transactionDate: z.date(),
+    notes: z.string().optional(),
+    branchId: z.number(),
+    items: z.array(z.object({
+        masterItemId: z.number().min(1, "Barang wajib dipilih"),
+        masterItemVariantId: z.number().min(1, "Variant wajib dipilih"),
+        actualQty: z.number().min(0, "Qty fisik wajib diisi (>= 0)"),
+    })).min(1, "Minimal pilih 1 item"),
+}).refine((data) => {
+    // Unique variant check
+    const variantIds = data.items.map(i => i.masterItemVariantId);
+    const uniqueIds = new Set(variantIds);
+    return variantIds.length === uniqueIds.size;
+}, {
+    message: "Terdapat item variant yang sama (duplikat)",
+    path: ["items"],
+});
+
+type CreateAdjustStockFormValues = z.infer<typeof createAdjustStockSchema>;
+
 export default function AdjustStockPage() {
+    const { branch } = useBranch();
+    const [search, setSearch] = useState("");
+    const [pagination, setPagination] = useState<PaginationState>({
+        pageIndex: 0,
+        pageSize: 10,
+    });
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+    const debouncedSearch = useDebounce(search, 500);
+
+    // Queries
+    const { data: adjustments, isLoading } = useAdjustStocks({
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+        search: debouncedSearch,
+        sort: sorting[0]?.desc ? "desc" : "asc",
+        sortBy: sorting[0]?.id,
+        dateStart: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+        dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+        branchId: branch?.id,
+    });
+
+    const createMutation = useCreateAdjustStock();
+    const deleteMutation = useDeleteAdjustStock();
+
+    // State
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [detailId, setDetailId] = useState<number | null>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+
+    // Fetch Detail
+    const { data: detailData, isLoading: isDetailLoading } = useAdjustStock(detailId);
+
+    // Form
+    const form = useForm<CreateAdjustStockFormValues>({
+        resolver: zodResolver(createAdjustStockSchema),
+        defaultValues: {
+            transactionDate: new Date(),
+            notes: "",
+            branchId: branch?.id || 0,
+            items: [],
+        },
+    });
+
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "items",
+    });
+
+    const watchedItems = useWatch({ control: form.control, name: "items" });
+
+    // Update branchId when branch context changes
+    const watchedBranchId = useWatch({ control: form.control, name: "branchId" });
+    if (branch?.id && watchedBranchId !== branch.id) {
+        form.setValue("branchId", branch.id);
+    }
+
+    // --- Detail View Handling ---
+    const handleViewDetail = (id: number) => {
+        setDetailId(id);
+        setIsCreateOpen(true);
+    };
+
+    const handleCreate = () => {
+        setDetailId(null);
+        form.reset({
+            transactionDate: new Date(),
+            notes: "",
+            branchId: branch?.id || 0,
+            items: [],
+        });
+        append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 }); // Start with 1 empty row
+        setIsCreateOpen(true);
+    };
+
+    const handleOpenChange = (open: boolean) => {
+        setIsCreateOpen(open);
+        if (!open) {
+            setDetailId(null);
+            form.reset();
+        }
+    };
+
+    // Populate form for Detail View (Read-only)
+    // NOTE: For detail view, we map data to form just for display consistent UI
+    // But since schema is rigid about creation (actualQty), and detail response has more fields (gap, currentStock),
+    // we might need to be careful. However, since we disable inputs, it's mostly for visuals.
+    // Actually, detail view usually shows MORE info (Current Stock, Gap).
+    // The create form intentionally HIDES Current Stock/Gap to force blind count.
+    // So reusing the EXACT same form might be tricky if we want to show calculated gaps.
+    // Strategy: Use the same Dialog, but render a different content for Detail vs Create if structure diverges significantly.
+    // Or, add read-only fields to the form array?
+    // Let's stick to simple form reuse first, maybe mapped to notes?
+    // BETTER: If detailId is set, show a custom Detail View table instead of the FormField array.
+
+    // --- Items Query (for Create Form) ---
+    const { data: items } = useItems({
+        page: 1,
+        limit: 100, // Should use debounce/search in real Combobox, for now fetch 100
+    });
+
+    // Valid Items (only with variants)
+    const validItems = useMemo(() => {
+        return items?.data?.filter(i => i.masterItemVariants && i.masterItemVariants.length > 0) || [];
+    }, [items]);
+
+    // Used for Combobox options
+    const itemOptions = useMemo(() => {
+        return validItems.map(i => ({ id: i.id, name: i.name }));
+    }, [validItems]);
+
+    // Handle Item Select
+    const handleItemSelect = (index: number, itemId: number) => {
+        const item = validItems.find(i => i.id === itemId);
+        if (item) {
+            form.setValue(`items.${index}.masterItemId`, itemId);
+            form.setValue(`items.${index}.masterItemVariantId`, 0); // Reset variant
+        }
+    };
+
+    // Submit
+    const onSubmit = (values: CreateAdjustStockFormValues) => {
+        createMutation.mutate(values, {
+            onSuccess: () => {
+                setIsCreateOpen(false);
+            },
+        });
+    };
+
+    const onDelete = () => {
+        if (deleteId) {
+            deleteMutation.mutate(deleteId, {
+                onSuccess: () => setDeleteId(null),
+            });
+        }
+    };
+
+    // Columns
+    const columns: ColumnDef<TransactionAdjustment>[] = [
+        {
+            accessorKey: "createdAt",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Tanggal" />
+            ),
+            cell: ({ row }) => {
+                const date = new Date(row.original.createdAt);
+                return isNaN(date.getTime()) ? "-" : format(date, "dd MMM yyyy HH:mm", { locale: idLocale });
+            },
+        },
+        {
+            accessorKey: "masterItem.name",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Barang" />
+            ),
+            cell: ({ row }) => (
+                <div className="flex flex-col">
+                    <span className="font-medium">{row.original.masterItem?.name}</span>
+                    <span className="text-xs text-muted-foreground">{row.original.masterItemVariant?.code}</span>
+                </div>
+            )
+        },
+        {
+            accessorKey: "gapAmount",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Selisih" className="text-right" />
+            ),
+            cell: ({ row }) => (
+                <div className={cn("text-right font-mono font-bold", row.original.gapAmount > 0 ? "text-green-600" : "text-red-600")}>
+                    {row.original.gapAmount > 0 ? "+" : ""}{row.original.gapAmount} {row.original.masterItemVariant?.unit}
+                </div>
+            )
+        },
+        {
+            accessorKey: "notes",
+            header: "Catatan",
+            cell: ({ row }) => <span className="text-muted-foreground italic truncate max-w-[200px] block">{row.original.notes || "-"}</span>
+        },
+        {
+            id: "actions",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleViewDetail(row.original.id)}>
+                        <Eye className="h-4 w-4 text-blue-500" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(row.original.id)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                </div>
+            ),
+        },
+    ];
+
+    const table = useReactTable({
+        data: adjustments?.data || [],
+        columns,
+        state: {
+            pagination,
+            sorting,
+            columnVisibility,
+        },
+        pageCount: adjustments?.pagination?.totalPages || -1,
+        onPaginationChange: setPagination,
+        onSortingChange: setSorting,
+        onColumnVisibilityChange: setColumnVisibility,
+        getCoreRowModel: getCoreRowModel(),
+        manualPagination: true,
+        manualSorting: true,
+        manualFiltering: true,
+    });
+
     return (
-        <div>
-            <h1 className="text-2xl font-bold">Adjust Stock</h1>
-            <p>Manage stock adjustments here.</p>
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold tracking-tight">Penyesuaian Stok</h2>
+                <Button onClick={handleCreate}>
+                    <Plus className="mr-2 h-4 w-4" /> Penyesuaian Stok Baru
+                </Button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-[250px]">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Cari transaksi..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-8"
+                        />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+                    {dateRange && (
+                        <Button variant="ghost" size="icon" onClick={() => setDateRange(undefined)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            <DataTable
+                table={table}
+                columnsLength={columns.length}
+                isLoading={isLoading}
+                showSelectedRowCount={false}
+            />
+
+            {/* Pagination Controls could be added here similar to DataTable component */}
+
+            {/* Create / Detail Dialog */}
+            <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
+                <DialogContent className="max-w-4xl! max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{detailId ? "Detail Penyesuaian Stok" : "Penyesuaian Stok Baru"}</DialogTitle>
+                        <DialogDescription>
+                            {detailId ? "Informasi detail penyesuaian stok." : "Input jumlah fisik barang. Sistem akan menghitung selisih stok otomatis."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {detailId && isDetailLoading ? (
+                        <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                    ) : detailId && detailData ? (
+                        // READ ONLY DETAIL VIEW
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="font-semibold block">Tanggal</span>
+                                    <span>{detailData.data?.createdAt ? format(new Date(detailData.data.createdAt), "dd MMMM yyyy HH:mm", { locale: idLocale }) : "-"}</span>
+                                </div>
+                                <div>
+                                    <span className="font-semibold block">Barang</span>
+                                    <span>{detailData.data?.masterItem?.name}</span>
+                                </div>
+                                <div>
+                                    <span className="font-semibold block">Variant</span>
+                                    <span>{detailData.data?.masterItemVariant?.code} ({detailData.data?.masterItemVariant?.unit})</span>
+                                </div>
+                                <div>
+                                    <span className="font-semibold block">Selisih</span>
+                                    <span className={cn("font-bold", (detailData.data?.gapAmount || 0) > 0 ? "text-green-600" : "text-red-600")}>
+                                        {(detailData.data?.gapAmount || 0) > 0 ? "+" : ""}{detailData.data?.gapAmount} {detailData.data?.masterItemVariant?.unit}
+                                    </span>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="font-semibold block">Catatan</span>
+                                    <p className="bg-muted p-2 rounded-md italic">{detailData.data?.notes || "-"}</p>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => handleOpenChange(false)}>Tutup</Button>
+                            </DialogFooter>
+                        </div>
+                    ) : (
+                        // CREATE FORM
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="transactionDate" render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Tanggal Transaksi</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                            {field.value ? format(field.value, "PPP", { locale: idLocale }) : <span>Pilih tanggal</span>}
+                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="notes" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Catatan</FormLabel>
+                                            <FormControl><Textarea {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-sm font-semibold">List Barang</h4>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 })}>
+                                            <CirclePlus className="mr-2 h-4 w-4" /> Tambah Barang
+                                        </Button>
+                                    </div>
+
+                                    {fields.length === 0 && (
+                                        <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
+                                            Belum ada barang yang di-input.
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-4">
+                                        {fields.map((field, index) => {
+                                            const selectedItemId = watchedItems?.[index]?.masterItemId;
+                                            const selectedItem = validItems.find(i => i.id === selectedItemId);
+                                            const variants = selectedItem?.masterItemVariants || [];
+
+                                            // Filter options: exclude items selected in other rows
+                                            const otherSelectedIds = watchedItems
+                                                ?.map((item, i) => (i !== index ? item.masterItemId : null))
+                                                .filter((id) => id !== 0 && id != null) || [];
+
+                                            const filteredOptions = itemOptions.filter(opt => !otherSelectedIds.includes(opt.id) || opt.id === selectedItemId);
+
+
+                                            return (
+                                                <div key={field.id} className="grid grid-cols-12 gap-4 items-end border p-4 rounded-md relative bg-muted/20">
+                                                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-red-500" onClick={() => remove(index)}>
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+
+                                                    <div className="col-span-5">
+                                                        <FormField control={form.control} name={`items.${index}.masterItemId`} render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel className="text-xs">Barang</FormLabel>
+                                                                <Combobox
+                                                                    value={field.value}
+                                                                    onChange={(val) => handleItemSelect(index, val)}
+                                                                    options={filteredOptions}
+                                                                    placeholder="Pilih Barang"
+                                                                    className="w-full"
+                                                                />
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} />
+                                                    </div>
+
+                                                    <div className="col-span-4">
+                                                        <FormField control={form.control} name={`items.${index}.masterItemVariantId`} render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel className="text-xs">Variant</FormLabel>
+                                                                <Select
+                                                                    onValueChange={(val) => field.onChange(parseInt(val))}
+                                                                    value={field.value ? field.value.toString() : undefined}
+                                                                    disabled={!selectedItemId}
+                                                                >
+                                                                    <FormControl>
+                                                                        <SelectTrigger><SelectValue placeholder="Pilih Variant" /></SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent>
+                                                                        {variants.map((v: ItemVariant) => (
+                                                                            <SelectItem key={v.id} value={v.id.toString()}>
+                                                                                {v.code} - {v.unit}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} />
+                                                    </div>
+
+                                                    <div className="col-span-3">
+                                                        <FormField control={form.control} name={`items.${index}.actualQty`} render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel className="text-xs font-bold text-primary">Fisik (Qty)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input type="number" min="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} />
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {form.formState.errors.items?.root && (
+                                        <p className="text-sm text-red-500 font-medium bg-red-50 p-2 rounded border border-red-200">
+                                            {form.formState.errors.items.root.message}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Batal</Button>
+                                    <Button type="submit" disabled={createMutation.isPending}>
+                                        {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Simpan
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Batalkan Penyesuaian Stok?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tindakan ini akan mengembalikan stok barang ke kondisi sebelum penyesuaian. Data yang dihapus tidak dapat dikembalikan.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={onDelete} className="bg-red-600 hover:bg-red-700">
+                            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ya, Hapus"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

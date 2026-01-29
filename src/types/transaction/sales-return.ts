@@ -12,6 +12,11 @@ export interface SalesReturnItem {
   recordedTotalAmount: number;
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
+  transactionSalesReturnDiscounts?: {
+    id: number;
+    percentage: number;
+    recordedAmount: number;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -19,14 +24,19 @@ export interface SalesReturnItem {
 export interface SalesReturn {
   id: number;
   returnNumber: string;
-  originalInvoiceNumber: string;
-  transactionDate: string;
+  transactionSalesId: number;
+  notes?: string | null;
+  recordedSubTotalAmount: number;
+  recordedDiscountAmount: number;
+  recordedTotalAmount: number;
   branchId: number;
   masterMemberId?: number | null;
-  notes?: string | null;
-  recordedTotalAmount: number;
+  transactionSales?: {
+    id: number;
+    invoiceNumber: string;
+  };
   masterMember?: Member;
-  items: SalesReturnItem[];
+  transactionSalesReturnItems: SalesReturnItem[];
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

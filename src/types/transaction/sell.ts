@@ -27,6 +27,7 @@ export interface Sell {
   masterMemberId: number;
   notes?: string | null;
   taxPercentage: number;
+  recordedTaxPercentage?: number;
   recordedTaxAmount: number;
   recordedTotalAmount: number;
   masterMember?: Member;

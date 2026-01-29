@@ -118,12 +118,12 @@ export const queryKeys = {
       detail: (id: number | string) =>
         [...queryKeys.transaction.sellReturn.all, "detail", id] as const,
     },
-    transfer: {
-      all: ["transaction", "transfer"] as const,
+    transfers: {
+      all: ["transaction", "transfers"] as const,
       list: (params?: unknown) =>
-        [...queryKeys.transaction.transfer.all, "list", params] as const,
+        [...queryKeys.transaction.transfers.all, "list", params] as const,
       detail: (id: number | string) =>
-        [...queryKeys.transaction.transfer.all, "detail", id] as const,
+        [...queryKeys.transaction.transfers.all, "detail", id] as const,
     },
   },
 };
@@ -150,6 +150,6 @@ export const invalidationMap = {
     salesReturn: () => [queryKeys.transaction.salesReturn.all],
     sell: () => [queryKeys.transaction.sell.all],
     sellReturn: () => [queryKeys.transaction.sellReturn.all],
-    transfer: () => [queryKeys.transaction.transfer.all],
+    transfer: () => [queryKeys.transaction.transfers.all],
   },
 };

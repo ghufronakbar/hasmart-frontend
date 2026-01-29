@@ -12,6 +12,7 @@ export interface SellReturnItem {
   recordedTotalAmount: number;
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
+  discounts?: { percentage: number }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -26,10 +27,13 @@ export interface SellReturn {
   masterMemberId: number;
   notes?: string | null;
   taxPercentage: number;
+  recordedTaxPercentage?: number;
   recordedTaxAmount: number;
   recordedTotalAmount: number;
   masterMember?: Member;
   items: SellReturnItem[];
+  // Backend response might include this for mapping
+  transactionSellReturnItems?: SellReturnItem[];
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
