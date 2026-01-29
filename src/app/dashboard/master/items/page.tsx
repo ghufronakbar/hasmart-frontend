@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useMemo, useState, useEffect } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
@@ -507,9 +508,8 @@ export default function ItemsPage() {
                         <TableRow>
                             <TableHead className="w-[50px]">ID</TableHead>
                             <TableHead>Nama Item</TableHead>
-                            <TableHead>Kategori</TableHead>
-                            <TableHead>Supplier</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>Harga Beli</TableHead>
+                            <TableHead>Stok</TableHead>
                             <TableHead>Variant</TableHead>
                             <TableHead>Unit</TableHead>
                             <TableHead>Konversi</TableHead>
@@ -544,21 +544,25 @@ export default function ItemsPage() {
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
                                                     <div className="font-semibold">{item.name}</div>
-                                                </TableCell>
-                                                <TableCell rowSpan={rowSpan} className="align-top border-r">
+                                                    <Badge variant={item.isActive ? "default" : "secondary"}>
+                                                        {item.isActive ? "Aktif" : "Nonaktif"}
+                                                    </Badge>
                                                     {item.masterItemCategory?.name ? (
                                                         <Badge variant="outline">
                                                             {item.masterItemCategory.name}
                                                         </Badge>
                                                     ) : "-"}
+                                                    {item.masterSupplier?.code ? (
+                                                        <Badge variant="outline">
+                                                            {item.masterSupplier?.code ? `${item.masterSupplier.code} (${item.masterSupplier?.name})` : "-"}
+                                                        </Badge>
+                                                    ) : "-"}
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
-                                                    {item.masterSupplier?.name || "-"}
+                                                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(item.masterItemVariants?.[0].sellPrice)}
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
-                                                    <Badge variant={item.isActive ? "default" : "secondary"}>
-                                                        {item.isActive ? "Aktif" : "Nonaktif"}
-                                                    </Badge>
+                                                    {item.stock}
                                                 </TableCell>
                                             </>
                                         )}

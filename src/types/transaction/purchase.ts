@@ -16,6 +16,7 @@ export interface PurchaseItem {
   recordedTotalAmount: number;
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
+  discounts?: PurchaseItemDiscount[];
   createdAt: string;
   updatedAt: string;
 }
@@ -29,9 +30,13 @@ export interface Purchase {
   branchId: number;
   notes?: string | null;
   taxAmount: number;
+  recordedTaxAmount: number;
+  recordedTaxPercentage: number;
   recordedTotalAmount: number;
   masterSupplier?: Supplier;
   items: PurchaseItem[];
+  // Backend response might have items here
+  transactionPurchaseItems?: PurchaseItem[];
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -52,11 +57,11 @@ export interface CreatePurchaseDTO {
   masterSupplierId: number;
   branchId: number;
   notes?: string | null;
-  taxAmount?: number;
+  taxPercentage: number;
   items: CreatePurchaseItemDTO[];
 }
 
-export type UpdatePurchaseDTO = Partial<CreatePurchaseDTO>;
+export type UpdatePurchaseDTO = CreatePurchaseDTO;
 
 export type PurchaseResponse = BaseResponse<Purchase>;
 export type PurchaseListResponse = BaseResponse<Purchase[]>;

@@ -5,6 +5,7 @@ import {
   PurchaseListResponse,
   PurchaseResponse,
   UpdatePurchaseDTO,
+  Purchase,
 } from "@/types/transaction/purchase";
 
 export const purchaseService = {
@@ -17,9 +18,31 @@ export const purchaseService = {
   },
 
   get: async (id: number | string) => {
-    const response = await axiosInstance.get<PurchaseResponse>(
+    const response = await axiosInstance.get<PurchaseResponse>( // Changed type to PurchaseResponse
       `/transaction/purchase/${id}`,
     );
+    // Map backend response to frontend model
+    if (response.data && response.data.data) {
+      // Safe cast to access potential different property name
+      const d = response.data.data as Purchase & {
+        transactionPurchaseItems?: import("@/types/transaction/purchase").PurchaseItem[];
+      }; // Modified line
+      if (d.transactionPurchaseItems && (!d.items || d.items.length === 0)) {
+        // Modified condition
+        // Map items and their nested discounts
+        d.items = d.transactionPurchaseItems.map((item) => ({
+          ...item,
+          discounts:
+            (
+              item as unknown as {
+                transactionPurchaseDiscounts?: { percentage: number }[];
+              }
+            ).transactionPurchaseDiscounts ||
+            item.discounts ||
+            [],
+        }));
+      }
+    }
     return response.data;
   },
 

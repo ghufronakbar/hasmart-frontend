@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -124,7 +124,7 @@ export default function MembersPage() {
     const { mutate: deleteMember, isPending: isDeleting } = useDeleteMember();
 
     const form = useForm<MemberFormValues>({
-        resolver: zodResolver(memberSchema) as any,
+        resolver: zodResolver(memberSchema) as Resolver<MemberFormValues>,
         defaultValues: {
             code: "",
             name: "",
