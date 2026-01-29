@@ -12,6 +12,7 @@ export interface PurchaseReturnItem {
   recordedTotalAmount: number;
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
+  discounts?: { percentage: number }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -24,10 +25,14 @@ export interface PurchaseReturn {
   masterSupplierId: number;
   branchId: number;
   notes?: string | null;
-  taxAmount: number;
+  taxAmount: number; // Keep for legacy/compat
+  recordedTaxAmount: number;
+  recordedTaxPercentage: number;
   recordedTotalAmount: number;
   masterSupplier?: Supplier;
   items: PurchaseReturnItem[];
+  // Backend response might have items here
+  transactionPurchaseReturnItems?: PurchaseReturnItem[];
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -48,11 +53,11 @@ export interface CreatePurchaseReturnDTO {
   masterSupplierId: number;
   branchId: number;
   notes?: string | null;
-  taxAmount?: number;
+  taxPercentage: number;
   items: CreatePurchaseReturnItemDTO[];
 }
 
-export type UpdatePurchaseReturnDTO = Partial<CreatePurchaseReturnDTO>;
+export type UpdatePurchaseReturnDTO = CreatePurchaseReturnDTO;
 
 export type PurchaseReturnResponse = BaseResponse<PurchaseReturn>;
 export type PurchaseReturnListResponse = BaseResponse<PurchaseReturn[]>;

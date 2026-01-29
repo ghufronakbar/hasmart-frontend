@@ -5,6 +5,7 @@ import {
   PurchaseReturnListResponse,
   PurchaseReturnResponse,
   UpdatePurchaseReturnDTO,
+  PurchaseReturn,
 } from "@/types/transaction/purchase-return";
 
 export const purchaseReturnService = {
@@ -20,6 +21,29 @@ export const purchaseReturnService = {
     const response = await axiosInstance.get<PurchaseReturnResponse>(
       `/transaction/purchase-return/${id}`,
     );
+    // Map backend response to frontend model
+    if (response.data && response.data.data) {
+      const d = response.data.data as PurchaseReturn & {
+        transactionPurchaseReturnItems?: import("@/types/transaction/purchase-return").PurchaseReturnItem[];
+      };
+      if (
+        d.transactionPurchaseReturnItems &&
+        (!d.items || d.items.length === 0)
+      ) {
+        // Map items and their nested discounts
+        d.items = d.transactionPurchaseReturnItems.map((item) => ({
+          ...item,
+          discounts:
+            (
+              item as unknown as {
+                transactionPurchaseReturnDiscounts?: { percentage: number }[];
+              }
+            ).transactionPurchaseReturnDiscounts ||
+            item.discounts ||
+            [],
+        }));
+      }
+    }
     return response.data;
   },
 
