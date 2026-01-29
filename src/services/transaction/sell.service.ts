@@ -5,6 +5,7 @@ import {
   SellListResponse,
   SellResponse,
   UpdateSellDTO,
+  Sell,
 } from "@/types/transaction/sell";
 
 export const sellService = {
@@ -20,6 +21,25 @@ export const sellService = {
     const response = await axiosInstance.get<SellResponse>(
       `/transaction/sell/${id}`,
     );
+    // Map backend response to frontend model
+    if (response.data && response.data.data) {
+      const d = response.data.data as Sell & {
+        transactionSellItems?: import("@/types/transaction/sell").SellItem[];
+      };
+      if (d.transactionSellItems && (!d.items || d.items.length === 0)) {
+        d.items = d.transactionSellItems.map((item) => ({
+          ...item,
+          discounts:
+            (
+              item as unknown as {
+                transactionSellDiscounts?: { percentage: number }[];
+              }
+            ).transactionSellDiscounts ||
+            item.discounts ||
+            [],
+        }));
+      }
+    }
     return response.data;
   },
 

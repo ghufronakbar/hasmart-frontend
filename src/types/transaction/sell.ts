@@ -12,6 +12,7 @@ export interface SellItem {
   recordedTotalAmount: number;
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
+  discounts?: { percentage: number }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -22,7 +23,7 @@ export interface Sell {
   transactionDate: string;
   dueDate: string;
   branchId: number;
-  memberCode: string;
+  memberCode: string; // Mandatory
   masterMemberId: number;
   notes?: string | null;
   taxPercentage: number;
@@ -30,6 +31,8 @@ export interface Sell {
   recordedTotalAmount: number;
   masterMember?: Member;
   items: SellItem[];
+  // Backend response might include this for mapping
+  transactionSellItems?: SellItem[];
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
