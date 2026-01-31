@@ -416,12 +416,12 @@ export default function SalesReturnPage() {
 
     const columns = useMemo(() => [
         {
-            accessorKey: "createdAt",
+            accessorKey: "transactionDate",
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
             cell: ({ row }: any) => {
-                const date = new Date(row.original.createdAt);
+                const date = new Date(row.original.transactionDate);
                 return !isNaN(date.getTime()) ? format(date, "dd MMM yyyy", { locale: idLocale }) : "-";
             },
         },

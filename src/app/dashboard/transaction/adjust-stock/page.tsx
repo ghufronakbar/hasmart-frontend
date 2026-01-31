@@ -274,12 +274,12 @@ export default function AdjustStockPage() {
     // Columns
     const columns: ColumnDef<TransactionAdjustment>[] = [
         {
-            accessorKey: "createdAt",
+            accessorKey: "transactionDate",
             header: ({ column }) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
             cell: ({ row }) => {
-                const date = new Date(row.original.createdAt);
+                const date = new Date(row.original.transactionDate);
                 return isNaN(date.getTime()) ? "-" : format(date, "dd MMM yyyy HH:mm", { locale: idLocale });
             },
         },

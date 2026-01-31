@@ -32,6 +32,7 @@ export interface TransactionAdjustment {
   recordedGapConversion: number;
   totalGapAmount: number;
   branchId: number;
+  transactionDate: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

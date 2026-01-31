@@ -411,7 +411,7 @@ export default function SalesPage() {
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
             cell: ({ row }: any) => {
-                const date = new Date(row.original.transactionDate || row.original.createdAt);
+                const date = new Date(row.original.transactionDate);
                 return !isNaN(date.getTime()) ? format(date, "dd MMM yyyy", { locale: idLocale }) : "-";
             },
         },
