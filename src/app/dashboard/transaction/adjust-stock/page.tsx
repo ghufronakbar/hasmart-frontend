@@ -307,6 +307,17 @@ export default function AdjustStockPage() {
             )
         },
         {
+            accessorKey: "finalAmount",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Total Penyesuaian" className="text-right" />
+            ),
+            cell: ({ row }) => (
+                <div className={cn("text-right font-mono font-bold")}>
+                    {row.original.finalAmount}
+                </div>
+            )
+        },
+        {
             accessorKey: "notes",
             header: "Catatan",
             cell: ({ row }) => <span className="text-muted-foreground italic truncate max-w-[200px] block">{row.original.notes || "-"}</span>

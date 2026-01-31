@@ -28,6 +28,7 @@ export interface TransactionAdjustment {
   masterItemId: number;
   masterItemVariantId: number;
   gapAmount: number;
+  finalAmount: number;
   recordedGapConversion: number;
   totalGapAmount: number;
   branchId: number;
