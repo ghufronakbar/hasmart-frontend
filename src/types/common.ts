@@ -19,6 +19,8 @@ export interface FilterQuery {
   sort?: string;
   sortBy?: string;
   search?: string;
+  dateStart?: string;
+  dateEnd?: string;
   [key: string]: unknown;
 }
 

@@ -9,19 +9,16 @@ import {
   SellReturnListResponse,
 } from "@/types/transaction/sell-return";
 import { FilterQuery } from "@/types/common";
+import { useBranch } from "@/providers/branch-provider";
 
 // --- Sell Return Hooks ---
 
-export function useSellReturns(
-  params?: FilterQuery & {
-    dateStart?: string;
-    dateEnd?: string;
-    branchId?: number;
-  },
-) {
+export function useSellReturns(params?: FilterQuery) {
+  const { branch } = useBranch();
+  const p = { ...params, branchId: branch?.id };
   return useQuery<SellReturnListResponse>({
-    queryKey: queryKeys.transaction.sellReturn.list(params),
-    queryFn: () => sellReturnService.list(params),
+    queryKey: queryKeys.transaction.sellReturn.list(p),
+    queryFn: () => sellReturnService.list(p),
   });
 }
 

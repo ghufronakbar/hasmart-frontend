@@ -2,7 +2,7 @@ import { BaseResponse } from "@/types/common";
 import { Branch } from "@/types/app/branch";
 import { Item, ItemVariant } from "@/types/master/item";
 
-export interface TransactionTransferItem {
+export interface TransferItem {
   id: number;
   transactionTransferId: number;
   masterItemId: number;
@@ -19,7 +19,7 @@ export interface TransactionTransferItem {
   masterItemVariant?: ItemVariant;
 }
 
-export interface TransactionTransfer {
+export interface Transfer {
   id: number;
   transactionDate: string;
   notes?: string;
@@ -32,25 +32,24 @@ export interface TransactionTransfer {
   // Relations
   from?: Branch;
   to?: Branch;
-  transactionTransferItems?: TransactionTransferItem[];
+  transactionTransferItems?: TransferItem[];
 }
 
-export interface CreateTransactionTransferItemDTO {
+export interface CreateTransferItemDTO {
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
 }
 
-export interface CreateTransactionTransferDTO {
+export interface CreateTransferDTO {
   transactionDate: Date;
   fromId: number;
   toId: number;
   notes?: string;
-  items: CreateTransactionTransferItemDTO[];
+  items: CreateTransferItemDTO[];
 }
 
-export type UpdateTransactionTransferDTO =
-  Partial<CreateTransactionTransferDTO>;
+export type UpdateTransferDTO = Partial<CreateTransferDTO>;
 
-export type TransactionTransferResponse = BaseResponse<TransactionTransfer>;
-export type TransactionTransfersResponse = BaseResponse<TransactionTransfer[]>;
+export type TransferResponse = BaseResponse<Transfer>;
+export type TransferListResponse = BaseResponse<Transfer[]>;

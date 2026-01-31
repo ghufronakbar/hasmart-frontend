@@ -9,19 +9,16 @@ import {
   PurchaseReturnListResponse,
 } from "@/types/transaction/purchase-return";
 import { FilterQuery } from "@/types/common";
+import { useBranch } from "@/providers/branch-provider";
 
 // --- Purchase Return Hooks ---
 
-export function usePurchaseReturns(
-  params?: FilterQuery & {
-    dateStart?: string;
-    dateEnd?: string;
-    branchId?: number;
-  },
-) {
+export function usePurchaseReturns(params?: FilterQuery) {
+  const { branch } = useBranch();
+  const p = { ...params, branchId: branch?.id };
   return useQuery<PurchaseReturnListResponse>({
-    queryKey: queryKeys.transaction.purchaseReturn.list(params),
-    queryFn: () => purchaseReturnService.list(params),
+    queryKey: queryKeys.transaction.purchaseReturn.list(p),
+    queryFn: () => purchaseReturnService.list(p),
   });
 }
 

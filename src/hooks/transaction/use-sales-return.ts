@@ -9,19 +9,16 @@ import {
   SalesReturnListResponse,
 } from "@/types/transaction/sales-return";
 import { FilterQuery } from "@/types/common";
+import { useBranch } from "@/providers/branch-provider";
 
 // --- Sales Return Hooks ---
 
-export function useSalesReturns(
-  params?: FilterQuery & {
-    dateStart?: string;
-    dateEnd?: string;
-    branchId?: number;
-  },
-) {
+export function useSalesReturns(params?: FilterQuery) {
+  const { branch } = useBranch();
+  const p = { ...params, branchId: branch?.id };
   return useQuery<SalesReturnListResponse>({
-    queryKey: queryKeys.transaction.salesReturn.list(params),
-    queryFn: () => salesReturnService.list(params),
+    queryKey: queryKeys.transaction.salesReturn.list(p),
+    queryFn: () => salesReturnService.list(p),
   });
 }
 

@@ -97,6 +97,7 @@ import { useItemCategories } from "@/hooks/master/use-item-category";
 import { useUnits } from "@/hooks/master/use-unit";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
+import { Combobox } from "@/components/custom/combobox";
 
 // --- Validation Schemas ---
 
@@ -141,81 +142,6 @@ type CreateItemFormValues = z.infer<typeof createItemSchema>;
 type UpdateItemFormValues = z.infer<typeof updateItemSchema>;
 type VariantFormValues = z.infer<typeof variantSchema>;
 
-// --- Components ---
-
-const Combobox = ({
-    value,
-    onChange,
-    options,
-    placeholder = "Pilih...",
-    searchPlaceholder = "Cari...",
-    renderLabel,
-    disabled = false
-}: {
-    value?: number;
-    onChange: (val: number) => void;
-    options?: { id: number; name: string; code?: string }[];
-    placeholder?: string;
-    searchPlaceholder?: string;
-    renderLabel?: (item: { id: number; name: string; code?: string }) => React.ReactNode;
-    disabled?: boolean;
-}) => {
-    const [open, setOpen] = useState(false);
-
-    const selected = options?.find((item) => item.id === value);
-
-    const label = selected
-        ? (renderLabel ? renderLabel(selected) : selected.name)
-        : placeholder;
-
-    // Helper to render option text for search
-    const getOptionText = (item: any) => `${item.code || ''} ${item.name}`;
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between font-normal"
-                    disabled={disabled}
-                >
-                    {label}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                    <CommandInput placeholder={searchPlaceholder} />
-                    <CommandList>
-                        <CommandEmpty>Tidak ditemukan.</CommandEmpty>
-                        <CommandGroup>
-                            {options?.map((item) => (
-                                <CommandItem
-                                    key={item.id}
-                                    value={getOptionText(item)} // This value is used for search
-                                    onSelect={() => {
-                                        onChange(item.id);
-                                        setOpen(false);
-                                    }}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            value === item.id ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    {renderLabel ? renderLabel(item) : `${item.code ? `[${item.code}] ` : ''}${item.name}`}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
 
 
 export default function ItemsPage() {

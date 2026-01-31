@@ -9,19 +9,16 @@ import {
   SellListResponse,
 } from "@/types/transaction/sell";
 import { FilterQuery } from "@/types/common";
+import { useBranch } from "@/providers/branch-provider";
 
 // --- Sell Hooks ---
 
-export function useSells(
-  params?: FilterQuery & {
-    dateStart?: string;
-    dateEnd?: string;
-    branchId?: number;
-  },
-) {
+export function useSells(params?: FilterQuery) {
+  const { branch } = useBranch();
+  const p = { ...params, branchId: branch?.id };
   return useQuery<SellListResponse>({
-    queryKey: queryKeys.transaction.sell.list(params),
-    queryFn: () => sellService.list(params),
+    queryKey: queryKeys.transaction.sell.list(p),
+    queryFn: () => sellService.list(p),
   });
 }
 

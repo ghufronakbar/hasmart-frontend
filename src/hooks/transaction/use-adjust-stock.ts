@@ -6,11 +6,14 @@ import { toast } from "sonner";
 import { CreateTransactionAdjustmentDTO } from "@/types/transaction/adjust-stock";
 
 import { AxiosError } from "axios";
+import { useBranch } from "@/providers/branch-provider";
 
 export const useAdjustStocks = (params?: FilterQuery) => {
+  const { branch } = useBranch();
+  const p = { ...params, branchId: branch?.id };
   return useQuery({
-    queryKey: queryKeys.transaction.adjustStock.list(params),
-    queryFn: () => adjustStockService.list(params),
+    queryKey: queryKeys.transaction.adjustStock.list(p),
+    queryFn: () => adjustStockService.list(p),
   });
 };
 

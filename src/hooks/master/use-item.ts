@@ -10,13 +10,15 @@ import {
   UpdateItemVariantDTO,
 } from "@/types/master/item";
 import { FilterQuery } from "@/types/common";
+import { useBranch } from "@/providers/branch-provider";
 
 // --- Item Hooks ---
 
-export function useItems(params?: FilterQuery & { branchId?: number }) {
+export function useItems(params?: FilterQuery) {
+  const { branch } = useBranch();
   return useQuery({
-    queryKey: queryKeys.master.items.list(params),
-    queryFn: () => itemService.list(params),
+    queryKey: queryKeys.master.items.list({ ...params, branchId: branch?.id }),
+    queryFn: () => itemService.list({ ...params, branchId: branch?.id }),
   });
 }
 

@@ -84,7 +84,7 @@ import { useBranches } from "@/hooks/app/use-branch";
 import { useBranch as useBranchContext } from "@/providers/branch-provider";
 import { useItems } from "@/hooks/master/use-item";
 import { useDebounce } from "@/hooks/use-debounce";
-import { TransactionTransfer } from "@/types/transaction/transfer";
+import { Transfer } from "@/types/transaction/transfer";
 import { ItemVariant } from "@/types/master/item";
 import {
     AlertDialog,
@@ -147,9 +147,9 @@ export default function TransferPage() {
         limit: pagination.pageSize,
         search: debouncedSearch,
         sort: sorting.length > 0 ? (sorting[0].desc ? "desc" : "asc") : "desc",
-        sortBy: sorting.length > 0 ? sorting[0].id : "createdAt",
-        dateStart: dateRange?.from,
-        dateEnd: dateRange?.to,
+        sortBy: sorting.length > 0 ? sorting[0].id : undefined,
+        dateStart: dateRange?.from?.toISOString(),
+        dateEnd: dateRange?.to?.toISOString(),
     });
 
     // Fetch Detail
@@ -255,7 +255,7 @@ export default function TransferPage() {
 
 
     // Columns
-    const columns: ColumnDef<TransactionTransfer>[] = [
+    const columns: ColumnDef<Transfer>[] = [
         {
             accessorKey: "transactionDate",
             header: ({ column }) => (
