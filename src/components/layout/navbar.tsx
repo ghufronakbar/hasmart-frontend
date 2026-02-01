@@ -15,11 +15,13 @@ import { useBranch } from "@/providers/branch-provider";
 import { useState } from "react";
 import { MobileSidebar } from "./mobile-sidebar";
 import Link from "next/link";
+import { useProfile } from "@/hooks/app/use-user";
 
 export function Navbar() {
     const router = useRouter();
     const { branch, setBranch } = useBranch();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const { data: profile } = useProfile();
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -73,6 +75,7 @@ export function Navbar() {
                 </div>
             </div>
             <DropdownMenu>
+                <span className="text-sm font-medium">{profile?.data?.name}</span>
                 <DropdownMenuTrigger asChild>
                     <Button variant="secondary" size="icon" className="rounded-full">
                         <CircleUser className="h-5 w-5" />

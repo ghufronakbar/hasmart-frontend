@@ -67,7 +67,7 @@ export function useUpdateProfile() {
         queryKey: [...queryKeys.app.user.all, "profile"],
       });
       // Also invalidate auth user query if it's separate, but usually auth uses profile
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.user() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.app.user.all });
     },
   });
 }
