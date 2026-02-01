@@ -5,36 +5,28 @@ export interface User {
   name: string;
   isActive: boolean;
   isSuperUser: boolean;
-}
-
-export interface LoginDTO {
-  name: string;
-  password: string;
-}
-
-export interface UserStatus {
-  hasUsers: boolean;
-  userCount: number;
-}
-
-export interface FirstTimeSetupDTO {
-  name: string;
-  password: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateUserDTO {
   name: string;
-  password: string;
-  isActive?: boolean;
+  password?: string;
+  isActive: boolean;
 }
 
-export interface AuthResponseData {
-  user: User;
-  accessToken: string;
+export interface ResetPasswordDTO {
+  newPassword: string;
 }
 
-export type AuthResponse = BaseResponse<AuthResponseData>;
-export type UserStatusResponse = BaseResponse<UserStatus>;
+export interface EditProfileDTO {
+  name: string;
+}
+
+export interface ChangePasswordDTO {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export type UserResponse = BaseResponse<User>;
-export type WhoAmIResponse = BaseResponse<User>;
-export type UserListResponse = BaseResponse<User[]>; // For listing users (if added later)
+export type UserListResponse = BaseResponse<User[]>;

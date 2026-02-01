@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useBranch } from "@/providers/branch-provider";
 import { useState } from "react";
 import { MobileSidebar } from "./mobile-sidebar";
+import Link from "next/link";
 
 export function Navbar() {
     const router = useRouter();
@@ -81,7 +82,9 @@ export function Navbar() {
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>Pengaturan</DropdownMenuItem>
+                    <Link href="/dashboard/profile">
+                        <DropdownMenuItem>Pengaturan</DropdownMenuItem>
+                    </Link>
                     <DropdownMenuItem>Bantuan</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>Keluar</DropdownMenuItem>
