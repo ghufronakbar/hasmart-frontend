@@ -737,7 +737,11 @@ export default function SellPage() {
                                                             <FormField control={form.control} name={`items.${index}.sellPrice`} render={({ field }) => (
                                                                 <FormItem>
                                                                     <FormLabel className="text-xs">Harga Jual</FormLabel>
-                                                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                                                    <FormControl>
+                                                                        <div className="flex items-center h-10 px-3 text-sm border rounded-md bg-muted">
+                                                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(Number(field.value) || 0)}
+                                                                        </div>
+                                                                    </FormControl>
                                                                 </FormItem>
                                                             )} />
                                                         </div>

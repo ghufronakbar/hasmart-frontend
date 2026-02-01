@@ -658,7 +658,9 @@ export default function SalesPage() {
                                                                 <FormItem>
                                                                     <FormLabel className="text-xs">Harga</FormLabel>
                                                                     <FormControl>
-                                                                        <Input type="number" min="0" {...field} />
+                                                                        <div className="flex items-center h-10 px-3 text-sm border rounded-md bg-muted">
+                                                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(Number(field.value) || 0)}
+                                                                        </div>
                                                                     </FormControl>
                                                                     <FormMessage />
                                                                 </FormItem>
