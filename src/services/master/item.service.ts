@@ -7,6 +7,7 @@ import {
   ItemResponse,
   UpdateItemDTO,
   UpdateItemVariantDTO,
+  ItemVariantResponse,
 } from "@/types/master/item";
 
 export const itemService = {
@@ -77,6 +78,13 @@ export const itemService = {
   ) => {
     const response = await axiosInstance.delete<ItemResponse>(
       `/master/item/${itemId}/variant/${variantId}`,
+    );
+    return response.data;
+  },
+
+  getVariantByCode: async (code: string) => {
+    const response = await axiosInstance.get<ItemVariantResponse>(
+      `/master/item/${code}/variant`,
     );
     return response.data;
   },

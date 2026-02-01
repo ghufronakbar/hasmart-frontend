@@ -142,3 +142,11 @@ export function useDeleteVariant() {
     },
   });
 }
+
+export function useItemVariantByCode(code: string | undefined) {
+  return useQuery({
+    queryKey: ["master", "item", "variant", "by-code", code],
+    queryFn: () => itemService.getVariantByCode(code!),
+    enabled: !!code,
+  });
+}

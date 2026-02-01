@@ -58,3 +58,9 @@ export type UpdateItemVariantDTO = Partial<CreateItemVariantDTO>;
 
 export type ItemResponse = BaseResponse<Item>;
 export type ItemListResponse = BaseResponse<Item[]>;
+
+export interface ItemVariantWithItem extends ItemVariant {
+  masterItem: Item;
+}
+
+export type ItemVariantResponse = BaseResponse<ItemVariantWithItem>;
