@@ -31,7 +31,6 @@ export interface Sales {
   notes?: string | null;
   recordedTotalAmount: number;
   masterMember?: Member;
-  items: SalesItem[];
   transactionSalesItems?: SalesItem[]; // Backend relation name
   createdAt: string;
   updatedAt: string;

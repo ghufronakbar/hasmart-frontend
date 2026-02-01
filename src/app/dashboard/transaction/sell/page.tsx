@@ -144,6 +144,10 @@ export default function SellPage() {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
+    // --- Combobox Search States ---
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -158,7 +162,14 @@ export default function SellPage() {
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
 
-    const { data: items } = useItems({ limit: 1000 });
+
+
+    const { data: items } = useItems({
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc"
+    });
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const { data: sellDetail, isLoading: isLoadingDetail } = useSell(editingId);
@@ -193,6 +204,7 @@ export default function SellPage() {
         if (!open) {
             setEditingId(null);
             setMemberVerified(null);
+            setSearchItem("");
             form.reset({ branchId: branch?.id, transactionDate: new Date(), dueDate: new Date(), items: [], taxPercentage: 0, memberCode: "" });
         }
     };
@@ -693,6 +705,8 @@ export default function SellPage() {
                                                                         onChange={(val) => handleItemSelect(index, val)}
                                                                         options={itemOptions}
                                                                         placeholder="Pilih Barang"
+                                                                        inputValue={searchItem}
+                                                                        onInputChange={setSearchItem}
                                                                         renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                     />
                                                                     <FormMessage />

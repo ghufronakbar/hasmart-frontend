@@ -131,6 +131,10 @@ export default function SellReturnPage() {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
+    // --- Combobox Search States ---
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -145,7 +149,14 @@ export default function SellReturnPage() {
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
 
-    const { data: items } = useItems({ limit: 1000 });
+
+
+    const { data: items } = useItems({
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc"
+    });
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const { data: sellReturnDetail, isLoading: isLoadingDetail } = useSellReturn(editingId);
@@ -258,6 +269,7 @@ export default function SellReturnPage() {
             setIsInvoiceVerified(false);
             setInvoiceToCheck("");
             setSearchInvoiceQuery("");
+            setSearchItem("");
             form.reset({
                 branchId: branch?.id,
                 transactionDate: new Date(),
@@ -650,22 +662,30 @@ export default function SellReturnPage() {
 
                     {/* Pre-Check Step */}
                     {!editingId && !isInvoiceVerified ? (
-                        <div className="flex items-center justify-center p-12">
-                            <div className="w-full max-w-md space-y-4 border p-6 rounded-lg bg-card">
-                                <h3 className="text-lg font-semibold">Cek Invoice Penjualan</h3>
-                                <p className="text-sm text-muted-foreground">Silakan input nomor invoice penjualan (B2B) original untuk memulai retur.</p>
-                                <div className="flex gap-2">
+                        <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center gap-6">
+                            <div className="text-center space-y-2">
+                                <h3 className="text-xl font-semibold">Cek Invoice Penjualan</h3>
+                                <p className="text-muted-foreground text-sm">Masukkan nomor invoice penjualan (B2B) yang ingin diretur.</p>
+                            </div>
+                            <div className="w-full max-w-sm space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="INV-XXXX..."
+                                        placeholder="Contoh: INV-..."
                                         value={invoiceToCheck}
                                         onChange={(e) => setInvoiceToCheck(e.target.value)}
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") handleCheckInvoice();
                                         }}
+                                        className="pl-10 h-12 text-lg"
+                                        autoFocus
                                     />
-                                    <Button onClick={handleCheckInvoice} disabled={isCheckingInvoice || !invoiceToCheck}>
-                                        {isCheckingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                                    </Button>
+                                </div>
+                                {isCheckingInvoice && <div className="text-center text-sm text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mengecek...</div>}
+
+                                <div className="flex justify-center gap-4">
+                                    <Button variant="outline" type="button" onClick={() => setIsCreateOpen(false)}>Batal</Button>
+                                    <Button disabled={!invoiceToCheck || isCheckingInvoice} onClick={handleCheckInvoice}>Cek Invoice</Button>
                                 </div>
                             </div>
                         </div>
@@ -803,6 +823,8 @@ export default function SellReturnPage() {
                                                                                 onChange={(val) => handleItemSelect(index, val)}
                                                                                 options={itemOptions}
                                                                                 placeholder="Pilih Barang"
+                                                                                inputValue={searchItem}
+                                                                                onInputChange={setSearchItem}
                                                                                 renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                             />
                                                                             <FormMessage />

@@ -40,7 +40,9 @@ export interface ComboboxProps {
     searchPlaceholder?: string;
     renderLabel?: (item: ComboboxItem) => React.ReactNode;
     disabled?: boolean;
-    className?: string; // Add className prop
+    className?: string;
+    inputValue?: string;
+    onInputChange?: (val: string) => void;
 }
 
 export const Combobox = ({
@@ -51,7 +53,9 @@ export const Combobox = ({
     searchPlaceholder = "Cari...",
     renderLabel,
     disabled = false,
-    className
+    className,
+    inputValue,
+    onInputChange
 }: ComboboxProps) => {
     const [open, setOpen] = useState(false);
     const selected = options?.find((item) => item.id === value);
@@ -72,8 +76,12 @@ export const Combobox = ({
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                    <CommandInput placeholder={searchPlaceholder} />
+                <Command shouldFilter={!onInputChange}>
+                    <CommandInput
+                        placeholder={searchPlaceholder}
+                        value={inputValue}
+                        onValueChange={onInputChange}
+                    />
                     <CommandList>
                         <CommandEmpty>Tidak ditemukan.</CommandEmpty>
                         <CommandGroup>

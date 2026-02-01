@@ -93,6 +93,7 @@ import {
     useUpdatePurchaseReturn,
     useDeletePurchaseReturn,
 } from "@/hooks/transaction/use-purchase-return";
+import { usePurchaseByInvoice } from "@/hooks/transaction/use-purchase";
 import { useSuppliers } from "@/hooks/master/use-supplier";
 import { useItems } from "@/hooks/master/use-item";
 import { useBranch } from "@/providers/branch-provider";
@@ -120,14 +121,16 @@ const createPurchaseReturnSchema = z.object({
     notes: z.string().optional(),
     taxPercentage: z.coerce.number().min(0).max(100).default(0),
     items: z.array(purchaseReturnItemSchema).min(1, "Minimal 1 item"),
-    invoiceNumber: z.string(),
+    invoiceNumber: z.string("Invoice wajib diisi").min(1, "Invoice Wajib diisi"),
+    originalInvoiceNumber: z.string("Invoice Original wajib diisi").min(1, "Invoice Original Wajib diisi"),
 });
 
 
-import { PurchaseReturn, CreatePurchaseReturnDTO } from "@/types/transaction/purchase-return";
+import { PurchaseReturn, CreatePurchaseReturnDTO, PurchaseReturnItem } from "@/types/transaction/purchase-return";
 import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
+import { Purchase } from "@/types/transaction/purchase";
 
 type CreatePurchaseReturnFormValues = z.infer<typeof createPurchaseReturnSchema>;
 type PurchaseReturnItemFormValues = z.infer<typeof purchaseReturnItemSchema>;
@@ -143,6 +146,13 @@ export default function PurchaseReturnPage() {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
+    // --- Combobox Search States ---
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+
+    const [searchSupplier, setSearchSupplier] = useState("");
+    const debouncedSearchSupplier = useDebounce(searchSupplier, 200);
+
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -157,11 +167,117 @@ export default function PurchaseReturnPage() {
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
 
-    const { data: suppliers } = useSuppliers({ limit: 100 });
-    const { data: items } = useItems({ limit: 1000 });
+    const { data: suppliers } = useSuppliers({
+        limit: 20,
+        search: debouncedSearchSupplier,
+        sortBy: "name",
+        sort: "asc"
+    });
+    const { data: items } = useItems({
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc"
+    });
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const { data: purchaseReturnDetail, isLoading: isLoadingDetail } = usePurchaseReturn(editingId);
+
+    // --- Create Form ---
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+    const form = useForm<CreatePurchaseReturnFormValues>({
+        resolver: zodResolver(createPurchaseReturnSchema) as Resolver<CreatePurchaseReturnFormValues>,
+        defaultValues: {
+            transactionDate: new Date(),
+            dueDate: new Date(),
+            masterSupplierId: 0,
+            branchId: branch?.id || 0,
+            notes: "",
+            taxPercentage: 0,
+            items: [],
+            invoiceNumber: "",
+            originalInvoiceNumber: "",
+        },
+    });
+
+    // Invoice Check Logic
+    const [isInvoiceVerified, setIsInvoiceVerified] = useState(false);
+    const [searchInvoiceQuery, setSearchInvoiceQuery] = useState("");
+    const [submittedInvoiceQuery, setSubmittedInvoiceQuery] = useState("");
+
+    // Pass empty string if editing or if we don't want to search (though searchInvoiceQuery controls it)
+    // The hook has enabled: !!invoiceNumber built-in.
+    const { data: purchaseInvoiceData, isError: isInvoiceError, error: invoiceCheckError, isLoading: isCheckingInvoice } = usePurchaseByInvoice(
+        !editingId ? submittedInvoiceQuery : ""
+    );
+
+    // Initial State for form
+    useEffect(() => {
+        if (!editingId && !isInvoiceVerified) {
+            form.reset({
+                branchId: branch?.id || 0,
+                transactionDate: new Date(),
+                dueDate: new Date(),
+                items: [],
+                taxPercentage: 0,
+                masterSupplierId: 0,
+                invoiceNumber: "",
+                originalInvoiceNumber: "",
+            });
+        }
+    }, [isInvoiceVerified, editingId, branch, form]);
+
+    // Handle Invoice Found
+    useEffect(() => {
+        if (purchaseInvoiceData?.data && !editingId && submittedInvoiceQuery) {
+            const invoice = purchaseInvoiceData.data;
+            // Populate form
+            setIsInvoiceVerified(true);
+            form.setValue("originalInvoiceNumber", invoice.invoiceNumber);
+            form.setValue("branchId", invoice.branchId);
+            form.setValue("masterSupplierId", invoice.masterSupplierId);
+            form.setValue("taxPercentage", invoice.recordedTaxPercentage ?? 0);
+
+            // Map items
+            const newItems = invoice.items.map(item => ({
+                masterItemId: item.masterItemId,
+                masterItemVariantId: item.masterItemVariantId,
+                qty: item.qty, // Default to bought qty, user can reduce
+                purchasePrice: item.purchasePrice, // Use original purchase price
+                discounts: item.discounts?.map(d => ({ percentage: d.percentage })) || []
+            }));
+
+            form.setValue("items", newItems);
+            toast.success("Invoice ditemukan");
+            setSubmittedInvoiceQuery(""); // specific reset
+            setSearchInvoiceQuery("");
+        }
+    }, [purchaseInvoiceData, editingId, form, submittedInvoiceQuery]);
+
+    // Handle Invoice Error
+    useEffect(() => {
+        if (submittedInvoiceQuery && invoiceCheckError) {
+            toast.error("Invoice tidak ditemukan");
+            setSubmittedInvoiceQuery(""); // specific reset
+            setSearchInvoiceQuery("");
+        }
+    }, [invoiceCheckError, submittedInvoiceQuery]);
+
+    const handleResetVerification = () => {
+        setIsInvoiceVerified(false);
+        setSearchInvoiceQuery("");
+        form.reset({
+            branchId: branch?.id || 0,
+            transactionDate: new Date(),
+            dueDate: new Date(),
+            items: [],
+            taxPercentage: 0,
+            masterSupplierId: 0,
+            originalInvoiceNumber: "",
+            invoiceNumber: "",
+        });
+    };
 
     // Merge list items with detail items
     const itemOptions = useMemo(() => {
@@ -180,6 +296,18 @@ export default function PurchaseReturnPage() {
         return Array.from(map.values());
     }, [items?.data, purchaseReturnDetail, editingId]);
 
+    // Merge detail supplier if editing (to ensure it shows up)
+    const supplierOptions = useMemo(() => {
+        const list = suppliers?.data || [];
+        if (editingId && purchaseReturnDetail?.data?.masterSupplier) {
+            const current = purchaseReturnDetail.data.masterSupplier;
+            if (!list.find(s => s.id === current.id)) {
+                return [current, ...list];
+            }
+        }
+        return list;
+    }, [suppliers?.data, editingId, purchaseReturnDetail]);
+
     const { mutate: createPurchaseReturn, isPending: isCreating } = useCreatePurchaseReturn();
     const { mutate: updatePurchaseReturn, isPending: isUpdating } = useUpdatePurchaseReturn();
     const { mutate: deletePurchaseReturn, isPending: isDeleting } = useDeletePurchaseReturn();
@@ -189,31 +317,22 @@ export default function PurchaseReturnPage() {
         setIsCreateOpen(open);
         if (!open) {
             setEditingId(null);
+            setIsInvoiceVerified(false);
+            setSearchInvoiceQuery("");
+            setSearchInvoiceQuery("");
+            setSearchItem("");
+            setSearchSupplier("");
             form.reset({ branchId: branch?.id, transactionDate: new Date(), dueDate: new Date(), items: [], taxPercentage: 0 });
         }
     };
 
     // --- Create Form ---
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-    const form = useForm<CreatePurchaseReturnFormValues>({
-        resolver: zodResolver(createPurchaseReturnSchema) as Resolver<CreatePurchaseReturnFormValues>,
-        defaultValues: {
-            transactionDate: new Date(),
-            dueDate: new Date(),
-            masterSupplierId: 0,
-            branchId: branch?.id || 0,
-            notes: "",
-            taxPercentage: 0,
-            items: [],
-            invoiceNumber: "",
-        },
-    });
+    // Moved up
 
     // Ensure branchId is set when branch context loads
     useEffect(() => {
-        if (branch?.id) form.setValue("branchId", branch.id);
-    }, [branch, form]);
+        if (branch?.id && !editingId && !isInvoiceVerified) form.setValue("branchId", branch.id);
+    }, [branch, form, editingId, isInvoiceVerified]);
 
     const { fields, append, remove } = useFieldArray({
         control: form.control,
@@ -345,6 +464,8 @@ export default function PurchaseReturnPage() {
                 branchId: purchaseReturn.branchId,
                 notes: purchaseReturn.notes || "",
                 taxPercentage: parseFloat(Number(taxPct).toFixed(2)),
+                // Populating originalInvoiceNumber from relation (optional flattened) or manually
+                originalInvoiceNumber: purchaseReturn.originalInvoiceNumber || purchaseReturn.transactionPurchase?.invoiceNumber || "",
                 items: currentItems.map(item => ({
                     masterItemId: item.masterItemId,
                     masterItemVariantId: item.masterItemVariantId,
@@ -354,6 +475,7 @@ export default function PurchaseReturnPage() {
                 }))
             };
             form.reset(formDataVal);
+            setIsInvoiceVerified(true);
         }
     }, [editingId, purchaseReturnDetail, form]);
 
@@ -513,6 +635,7 @@ export default function PurchaseReturnPage() {
             />
 
 
+
             {/* Create / Edit Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
                 <DialogContent className="max-w-[80vw]! w-full h-[95vh] flex flex-col p-0 gap-0">
@@ -535,28 +658,83 @@ export default function PurchaseReturnPage() {
                             <Loader2 className="h-8 w-8 animate-spin" />
                             <span className="ml-2">Memuat data transaksi...</span>
                         </div>
+                    ) : !isInvoiceVerified && !editingId ? (
+                        <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center gap-6">
+                            <div className="text-center space-y-2">
+                                <h3 className="text-xl font-semibold">Cek Invoice Pembelian Asal</h3>
+                                <p className="text-muted-foreground text-sm">Masukkan nomor invoice pembelian yang ingin diretur.</p>
+                            </div>
+                            <div className="w-full max-w-sm space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Contoh: PURCHASE-..."
+                                        value={searchInvoiceQuery}
+                                        onChange={(e) => setSearchInvoiceQuery(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                setSubmittedInvoiceQuery(searchInvoiceQuery);
+                                            }
+                                        }}
+                                        className="pl-10 h-12 text-lg"
+                                        autoFocus
+                                    />
+                                </div>
+                                {isCheckingInvoice && <div className="text-center text-sm text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mengecek...</div>}
+
+                                <div className="flex justify-center gap-4">
+                                    <Button variant="outline" type="button" onClick={() => setIsCreateOpen(false)}>Batal</Button>
+                                    <Button disabled={!searchInvoiceQuery || isCheckingInvoice} onClick={() => {
+                                        setSubmittedInvoiceQuery(searchInvoiceQuery);
+                                    }}>Cek Invoice</Button>
+                                </div>
+                            </div>
+                        </div>
                     ) : (
                         <div className="flex-1 overflow-y-auto p-6">
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                                     {/* Header Info */}
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-4 border rounded-lg bg-slate-50">
-                                        <FormField control={form.control} name="invoiceNumber" render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>No. Invoice Retur</FormLabel>
-                                                <FormControl><Input placeholder="RET-XXX" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
+                                        <div className="flex flex-col gap-4">
+                                            <FormField control={form.control} name="originalInvoiceNumber" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Invoice Original</FormLabel>
+                                                    <FormControl>
+                                                        <div className="flex gap-2">
+                                                            <Input placeholder="PURCHASE-XXX" {...field} readOnly className="bg-muted" />
+                                                            {!editingId && (
+                                                                <Button type="button" variant="outline" size="icon" onClick={handleResetVerification} title="Ganti Invoice">
+                                                                    <X className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                            <FormField control={form.control} name="invoiceNumber" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>No. Invoice Retur</FormLabel>
+                                                    <FormControl><Input placeholder="RET-XXX" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        </div>
+
                                         <FormField control={form.control} name="masterSupplierId" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Supplier</FormLabel>
                                                 <Combobox
                                                     value={field.value}
                                                     onChange={(val) => form.setValue("masterSupplierId", val)}
-                                                    options={suppliers?.data || []}
+                                                    options={supplierOptions}
                                                     placeholder="Pilih Supplier"
+                                                    inputValue={searchSupplier}
+                                                    onInputChange={setSearchSupplier}
                                                     renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.code} ({item.name})</span><span className="text-[10px] text-muted-foreground">{(item as unknown as { masterItemCategory?: { name: string } }).masterItemCategory?.name}</span></div>}
+                                                    disabled // Readonly because tied to invoice
                                                 />
                                                 <FormMessage />
                                             </FormItem>
@@ -624,6 +802,8 @@ export default function PurchaseReturnPage() {
                                                                         onChange={(val) => handleItemSelect(index, val)}
                                                                         options={itemOptions}
                                                                         placeholder="Pilih Barang"
+                                                                        inputValue={searchItem}
+                                                                        onInputChange={setSearchItem}
                                                                         renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                     />
                                                                     <FormMessage />

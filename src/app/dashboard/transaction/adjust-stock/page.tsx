@@ -140,9 +140,15 @@ export default function AdjustStockPage() {
     });
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const debouncedSearch = useDebounce(search, 500);
+
+    // --- Search & Cache States ---
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+    const [selectedItemsCache, setSelectedItemsCache] = useState<Record<number, Item>>({});
 
     // Queries
     const { data: adjustments, isLoading } = useAdjustStocks({
@@ -185,6 +191,13 @@ export default function AdjustStockPage() {
 
     const watchedItems = useWatch({ control: form.control, name: "items" });
 
+    // Derive idNotIns from watched items
+    const idNotIns = useMemo(() => {
+        const ids = watchedItems?.map(i => i.masterItemId).filter(id => id > 0) || [];
+        // Unique IDs only
+        return Array.from(new Set(ids)).join(",");
+    }, [watchedItems]);
+
     // Update branchId when branch context changes
     const watchedBranchId = useWatch({ control: form.control, name: "branchId" });
     if (branch?.id && watchedBranchId !== branch.id) {
@@ -213,6 +226,7 @@ export default function AdjustStockPage() {
         setIsCreateOpen(open);
         if (!open) {
             setDetailId(null);
+            setSearchItem("");
             form.reset();
         }
     };
@@ -229,29 +243,53 @@ export default function AdjustStockPage() {
     // Let's stick to simple form reuse first, maybe mapped to notes?
     // BETTER: If detailId is set, show a custom Detail View table instead of the FormField array.
 
-    // --- Items Query (for Create Form) ---
+    // --- Items Query ---
     const { data: items } = useItems({
-        page: 1,
-        limit: 100, // Should use debounce/search in real Combobox, for now fetch 100
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc",
+        idNotIns, // Exclude selected items
     });
 
-    // Valid Items (only with variants)
-    const validItems = useMemo(() => {
-        return items?.data?.filter(i => i.masterItemVariants && i.masterItemVariants.length > 0) || [];
-    }, [items]);
+    const itemsList = items?.data || [];
 
-    // Used for Combobox options
-    const itemOptions = useMemo(() => {
-        return validItems.map(i => ({ id: i.id, name: i.name }));
-    }, [validItems]);
-
-    // Handle Item Select
-    const handleItemSelect = (index: number, itemId: number) => {
-        const item = validItems.find(i => i.id === itemId);
-        if (item) {
-            form.setValue(`items.${index}.masterItemId`, itemId);
-            form.setValue(`items.${index}.masterItemVariantId`, 0); // Reset variant
+    // Helper to get options for a specific row
+    const getRowOptions = (currentValue: number) => {
+        const cached = selectedItemsCache[currentValue];
+        // If cached item exists, prepend it. Deduplicate just in case.
+        if (cached) {
+            const exists = itemsList.find(i => i.id === cached.id);
+            if (!exists) return [cached, ...itemsList];
         }
+        return itemsList;
+    };
+
+    // Update cache when detail loads
+    useMemo(() => {
+        if (detailData?.data?.items) {
+            const newCache = { ...selectedItemsCache };
+            let hasChange = false;
+            detailData.data.items.forEach(item => {
+                if (item.masterItem && !newCache[item.masterItem.id]) {
+                    newCache[item.masterItem.id] = item.masterItem;
+                    hasChange = true;
+                }
+            });
+            if (hasChange) setSelectedItemsCache(newCache);
+        }
+    }, [detailData]);
+
+    // Update cache on selection
+    const handleItemSelect = (index: number, itemId: number) => {
+        // Find in current list
+        const item = itemsList.find(i => i.id === itemId);
+        if (item) {
+            setSelectedItemsCache(prev => ({ ...prev, [item.id]: item }));
+        }
+
+        form.setValue(`items.${index}.masterItemId`, itemId);
+        form.setValue(`items.${index}.masterItemVariantId`, 0); // Reset variant
     };
 
     // Submit
@@ -488,15 +526,9 @@ export default function AdjustStockPage() {
                                     <div className="space-y-4">
                                         {fields.map((field, index) => {
                                             const selectedItemId = watchedItems?.[index]?.masterItemId;
-                                            const selectedItem = validItems.find(i => i.id === selectedItemId);
+                                            // Get item details from cache or current list
+                                            const selectedItem = itemsList.find(i => i.id === selectedItemId) || selectedItemsCache[selectedItemId];
                                             const variants = selectedItem?.masterItemVariants || [];
-
-                                            // Filter options: exclude items selected in other rows
-                                            const otherSelectedIds = watchedItems
-                                                ?.map((item, i) => (i !== index ? item.masterItemId : null))
-                                                .filter((id) => id !== 0 && id != null) || [];
-
-                                            const filteredOptions = itemOptions.filter(opt => !otherSelectedIds.includes(opt.id) || opt.id === selectedItemId);
 
 
                                             return (
@@ -512,9 +544,12 @@ export default function AdjustStockPage() {
                                                                 <Combobox
                                                                     value={field.value}
                                                                     onChange={(val) => handleItemSelect(index, val)}
-                                                                    options={filteredOptions}
+                                                                    options={getRowOptions(field.value)}
                                                                     placeholder="Pilih Barang"
                                                                     className="w-full"
+                                                                    inputValue={searchItem}
+                                                                    onInputChange={setSearchItem}
+                                                                    renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                 />
                                                                 <FormMessage />
                                                             </FormItem>

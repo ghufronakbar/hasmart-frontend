@@ -35,6 +35,7 @@ export function usePurchaseByInvoice(invoiceNumber: string) {
     queryKey: queryKeys.transaction.purchase.byInvoice(invoiceNumber),
     queryFn: () => purchaseService.getByInvoice(invoiceNumber),
     enabled: !!invoiceNumber,
+    retry: 0,
   });
 }
 

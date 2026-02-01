@@ -51,6 +51,7 @@ export interface CreateSalesReturnItemDTO {
 }
 
 export interface CreateSalesReturnDTO {
+  transactionDate: Date;
   branchId: number;
   originalInvoiceNumber: string;
   notes?: string | null;

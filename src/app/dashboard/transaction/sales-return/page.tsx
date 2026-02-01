@@ -94,7 +94,7 @@ import {
     useUpdateSalesReturn,
     useDeleteSalesReturn,
 } from "@/hooks/transaction/use-sales-return";
-import { useSalesList } from "@/hooks/transaction/use-sales";
+import { useSalesList, useSalesByInvoice } from "@/hooks/transaction/use-sales";
 import { useItems } from "@/hooks/master/use-item";
 import { useBranch } from "@/providers/branch-provider";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -140,6 +140,10 @@ export default function SalesReturnPage() {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
+    // --- Combobox Search States ---
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -154,7 +158,14 @@ export default function SalesReturnPage() {
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
 
-    const { data: items } = useItems({ limit: 1000 });
+
+
+    const { data: items } = useItems({
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc"
+    });
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const { data: salesReturnDetail, isLoading: isLoadingDetail } = useSalesReturn(editingId);
@@ -186,7 +197,89 @@ export default function SalesReturnPage() {
 
     const [invoiceSearch, setInvoiceSearch] = useState("");
     const debouncedInvoiceSearch = useDebounce(invoiceSearch, 500);
-    const { data: salesData } = useSalesList({ search: debouncedInvoiceSearch, limit: 20 });
+    // const { data: salesData } = useSalesList({ search: debouncedInvoiceSearch, limit: 20 });
+
+    // Invoice Check Logic
+    const [isInvoiceVerified, setIsInvoiceVerified] = useState(false);
+    const [searchInvoiceQuery, setSearchInvoiceQuery] = useState("");
+    const [submittedInvoiceQuery, setSubmittedInvoiceQuery] = useState(""); // New state for submission
+
+    // Pass empty string if editing or if we don't want to search
+    const { data: salesInvoiceData, isError: isInvoiceError, error: invoiceCheckError, isLoading: isCheckingInvoice } = useSalesByInvoice(
+        !editingId ? submittedInvoiceQuery : ""
+    );
+
+    // Form Definition (Moved up to fix scope)
+    const form = useForm<CreateSalesReturnFormValues>({
+        resolver: zodResolver(createSalesReturnSchema) as Resolver<CreateSalesReturnFormValues>,
+        defaultValues: {
+            transactionDate: new Date(),
+            branchId: branch?.id || 0,
+            notes: "",
+            items: [],
+            originalInvoiceNumber: "",
+        },
+    });
+
+
+    // Initial State for form
+    useEffect(() => {
+        if (!editingId && !isInvoiceVerified) {
+            form.reset({
+                branchId: branch?.id || 0,
+                transactionDate: new Date(),
+                items: [],
+                originalInvoiceNumber: "",
+                notes: ""
+            });
+        }
+    }, [isInvoiceVerified, editingId, branch, form]);
+
+    // Handle Invoice Found
+    useEffect(() => {
+        if (salesInvoiceData?.data && !editingId && submittedInvoiceQuery) {
+            const invoice = salesInvoiceData.data;
+            // Populate form
+            setIsInvoiceVerified(true);
+            form.setValue("originalInvoiceNumber", invoice.invoiceNumber);
+            form.setValue("branchId", invoice.branchId);
+            form.setValue("notes", invoice.notes || "");
+
+            // Map items
+            const newItems = invoice?.transactionSalesItems?.map(item => ({
+                masterItemId: item.masterItemId,
+                masterItemVariantId: item.masterItemVariantId,
+                qty: item.qty, // Default to sold qty
+                salesPrice: item.salesPrice, // Use original sales price
+                discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: d.percentage })) || []
+            }));
+
+            form.setValue("items", newItems || []);
+            toast.success("Invoice ditemukan");
+            setSubmittedInvoiceQuery(""); // specific reset
+            setSearchInvoiceQuery("");
+        }
+    }, [salesInvoiceData, editingId, form, submittedInvoiceQuery]);
+
+    // Handle Invoice Error
+    useEffect(() => {
+        if (searchInvoiceQuery && invoiceCheckError) {
+            toast.error("Invoice tidak ditemukan");
+            setSearchInvoiceQuery("");
+        }
+    }, [invoiceCheckError, searchInvoiceQuery]);
+
+    const handleResetVerification = () => {
+        setIsInvoiceVerified(false);
+        setSearchInvoiceQuery("");
+        form.reset({
+            branchId: branch?.id || 0,
+            transactionDate: new Date(),
+            items: [],
+            originalInvoiceNumber: "",
+            notes: ""
+        });
+    };
 
     // Derived selected invoice data
     const [selectedInvoice, setSelectedInvoice] = useState<Partial<Sales> | null>(null);
@@ -200,25 +293,12 @@ export default function SalesReturnPage() {
         if (!open) {
             setEditingId(null);
             setSelectedInvoice(null);
+            setIsInvoiceVerified(false);
+            setSearchInvoiceQuery("");
+            setSearchItem("");
             form.reset({ branchId: branch?.id, transactionDate: new Date(), items: [], originalInvoiceNumber: "" });
         }
     };
-
-    const form = useForm<CreateSalesReturnFormValues>({
-        resolver: zodResolver(createSalesReturnSchema) as Resolver<CreateSalesReturnFormValues>,
-        defaultValues: {
-            transactionDate: new Date(),
-            branchId: branch?.id || 0,
-            notes: "",
-            items: [],
-            originalInvoiceNumber: "",
-        },
-    });
-
-    // Ensure branchId is set when branch context loads
-    useEffect(() => {
-        if (branch?.id) form.setValue("branchId", branch.id);
-    }, [branch, form]);
 
     const { fields, append, remove } = useFieldArray({
         control: form.control,
@@ -227,19 +307,48 @@ export default function SalesReturnPage() {
 
     const watchedItems = useWatch({ control: form.control, name: "items" }) as SalesReturnItemFormValues[];
 
-    // Handle Invoice Selection
-    const handleInvoiceSelect = (invoiceNumber: string) => {
-        // Find the invoice in the list
-        const invoice = salesData?.data?.find(s => s.invoiceNumber === invoiceNumber);
+    // Ensure branchId is set when branch context loads
+    useEffect(() => {
+        if (branch?.id && !editingId && !isInvoiceVerified) form.setValue("branchId", branch.id);
+    }, [branch, form, editingId, isInvoiceVerified]);
 
-        if (invoice) {
-            form.setValue("originalInvoiceNumber", invoiceNumber);
-            setSelectedInvoice(invoice);
-            toast.success(`Invoice dipilih`);
-        } else {
-            form.setValue("originalInvoiceNumber", invoiceNumber);
+    // Initial State for form
+    useEffect(() => {
+        if (!editingId && !isInvoiceVerified) {
+            form.reset({
+                branchId: branch?.id || 0,
+                transactionDate: new Date(),
+                items: [],
+                originalInvoiceNumber: "",
+                notes: ""
+            });
         }
-    };
+    }, [isInvoiceVerified, editingId, branch, form]);
+
+    // Handle Invoice Found
+    useEffect(() => {
+        if (salesInvoiceData?.data && !editingId && searchInvoiceQuery) {
+            const invoice = salesInvoiceData.data;
+            // Populate form
+            setIsInvoiceVerified(true);
+            form.setValue("originalInvoiceNumber", invoice.invoiceNumber);
+            form.setValue("branchId", invoice.branchId);
+            form.setValue("notes", invoice.notes || "");
+
+            // Map items
+            const newItems = invoice.transactionSalesItems?.map(item => ({
+                masterItemId: item.masterItemId,
+                masterItemVariantId: item.masterItemVariantId,
+                qty: item.qty, // Default to sold qty
+                salesPrice: item.salesPrice, // Use original sales price
+                discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: d.percentage })) || []
+            }));
+
+            form.setValue("items", newItems || []);
+            toast.success("Invoice ditemukan");
+            setSearchInvoiceQuery("");
+        }
+    }, [salesInvoiceData, editingId, form, searchInvoiceQuery]);
 
     // Helper to add/remove/update discounts manually
     const addDiscount = (itemIndex: number) => {
@@ -262,6 +371,32 @@ export default function SalesReturnPage() {
         newDiscounts[discountIndex] = { percentage: parseFloat(val) || 0 };
         form.setValue(`items.${itemIndex}.discounts`, newDiscounts);
     };
+
+    // --- Calculations --- (No Changes needed here, but included for context if surrounding lines changed)
+    // ...
+    // To minimize replacement size, I will stop here and do the Dialog UI in next step.
+
+    // Actually, I need to match the Start/End lines.
+    // The previous block was lines ~194 to ~242 (in original) / modified in last step.
+    // I need to cover:
+    // - useState isCreateOpen
+    // - handleOpenChange
+    // - form definition (move UP)
+    // - useEffects using form
+    // - useFieldArray
+
+    // I will replace from `// --- Create Form ---` down to `// --- Calculations ---`
+    // StartLine: 194 (approx) to 266 (approx)
+
+    // Wait, I already modified lines 186-242 in previous step.
+    // Now I need to fix the ordering to be:
+    // 1. useForm
+    // 2. useFieldArray, useWatch
+    // 3. useEffects (including the ones I added)
+    // 4. Handlers
+
+    // I will use `replace_file_content` to rewrite the whole block from `// --- Create Form ---` to `// --- Calculations ---` to ensure correct order.
+
 
     // --- Calculations ---
     const calculations = useMemo(() => {
@@ -545,6 +680,39 @@ export default function SalesReturnPage() {
                             <Loader2 className="h-8 w-8 animate-spin" />
                             <span className="ml-2">Memuat data transaksi...</span>
                         </div>
+                    ) : !isInvoiceVerified && !editingId ? (
+                        <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center gap-6">
+                            <div className="text-center space-y-2">
+                                <h3 className="text-xl font-semibold">Cek Invoice Penjualan Asal</h3>
+                                <p className="text-muted-foreground text-sm">Masukkan nomor invoice penjualan yang ingin diretur.</p>
+                            </div>
+                            <div className="w-full max-w-sm space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Contoh: INV-..."
+                                        value={searchInvoiceQuery}
+                                        onChange={(e) => setSearchInvoiceQuery(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                setSubmittedInvoiceQuery(searchInvoiceQuery);
+                                            }
+                                        }}
+                                        className="pl-10 h-12 text-lg"
+                                        autoFocus
+                                    />
+                                </div>
+                                {isCheckingInvoice && <div className="text-center text-sm text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mengecek...</div>}
+
+                                <div className="flex justify-center gap-4">
+                                    <Button variant="outline" type="button" onClick={() => setIsCreateOpen(false)}>Batal</Button>
+                                    <Button disabled={!searchInvoiceQuery || isCheckingInvoice} onClick={() => {
+                                        setSubmittedInvoiceQuery(searchInvoiceQuery);
+                                    }}>Cek Invoice</Button>
+                                </div>
+                            </div>
+                        </div>
                     ) : (
                         <div className="flex-1 overflow-y-auto p-6">
                             <Form {...form}>
@@ -554,75 +722,19 @@ export default function SalesReturnPage() {
                                         {/* Invoice Selection Section */}
                                         <div className="col-span-2">
                                             <FormField control={form.control} name="originalInvoiceNumber" render={({ field }) => (
-                                                <FormItem className="flex flex-col">
+                                                <FormItem>
                                                     <FormLabel>No. Invoice Penjualan Asli</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    role="combobox"
-                                                                    className={cn(
-                                                                        "w-full justify-between",
-                                                                        !field.value && "text-muted-foreground"
-                                                                    )}
-                                                                    disabled={!!editingId}
-                                                                >
-                                                                    {field.value
-                                                                        ? field.value
-                                                                        : "Cari Invoice..."}
-                                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    <FormControl>
+                                                        <div className="flex gap-2">
+                                                            <Input placeholder="INV-XXX" {...field} readOnly className="bg-muted" />
+                                                            {!editingId && (
+                                                                <Button type="button" variant="outline" size="icon" onClick={handleResetVerification} title="Ganti Invoice">
+                                                                    <X className="h-4 w-4" />
                                                                 </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                                            <Command shouldFilter={false}>
-                                                                <CommandInput
-                                                                    placeholder="Cari No. Invoice..."
-                                                                    value={invoiceSearch}
-                                                                    onValueChange={setInvoiceSearch}
-                                                                />
-                                                                <CommandList>
-                                                                    <CommandEmpty>Tidak ditemukan.</CommandEmpty>
-                                                                    <CommandGroup>
-                                                                        {salesData?.data?.map((sale) => (
-                                                                            <CommandItem
-                                                                                value={sale.invoiceNumber}
-                                                                                key={sale.id}
-                                                                                onSelect={() => {
-                                                                                    handleInvoiceSelect(sale.invoiceNumber);
-                                                                                }}
-                                                                            >
-                                                                                <Check
-                                                                                    className={cn(
-                                                                                        "mr-2 h-4 w-4",
-                                                                                        sale.invoiceNumber === field.value
-                                                                                            ? "opacity-100"
-                                                                                            : "opacity-0"
-                                                                                    )}
-                                                                                />
-                                                                                <div className="flex flex-col">
-                                                                                    <span>{sale.invoiceNumber}</span>
-                                                                                    <span className="text-xs text-muted-foreground">
-                                                                                        {!isNaN(new Date(sale.transactionDate).getTime()) ? format(new Date(sale.transactionDate), 'dd/MM/yyyy') : '-'}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </CommandItem>
-                                                                        ))}
-                                                                    </CommandGroup>
-                                                                </CommandList>
-                                                            </Command>
-                                                        </PopoverContent>
-                                                    </Popover>
-
-                                                    {selectedInvoice ? (
-                                                        <div className="text-sm text-green-600 flex items-center mt-1">
-                                                            <UserCheck className="h-3 w-3 mr-1" />
-                                                            Invoice Terverifikasi
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <FormMessage />
-                                                    )}
+                                                    </FormControl>
+                                                    <FormMessage />
                                                 </FormItem>
                                             )} />
                                         </div>
@@ -683,6 +795,8 @@ export default function SalesReturnPage() {
                                                                         onChange={(val) => handleItemSelect(index, val)}
                                                                         options={itemOptions}
                                                                         placeholder="Pilih Barang"
+                                                                        inputValue={searchItem}
+                                                                        onInputChange={setSearchItem}
                                                                         renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                     />
                                                                     <FormMessage />

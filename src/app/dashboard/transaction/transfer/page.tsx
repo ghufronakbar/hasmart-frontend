@@ -139,6 +139,16 @@ export default function TransferPage() {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
+
+    // --- Combobox Search States ---
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+    const [selectedItemsCache, setSelectedItemsCache] = useState<Record<number, any>>({}); // Using any for Item type to avoid import hell if not imported
+
+    const [searchBranch, setSearchBranch] = useState("");
+    const debouncedSearchBranch = useDebounce(searchBranch, 200);
+    const [selectedBranchCache, setSelectedBranchCache] = useState<Record<number, any>>({});
+
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     // Fetch List
@@ -155,24 +165,93 @@ export default function TransferPage() {
     // Fetch Detail
     const { data: detailData, isLoading: isDetailLoading } = useTransfer(detailId);
 
-    // Fetch Branches (for Select)
-    const { data: branches } = useBranches({ limit: 100 });
+    // Fetch Branches (for Select - From Branch)
+    // We fetch a basic list for the 'from' branch selector. 
+    // Ideally this should be just the current branch if we don't allow changing, 
+    // but preserving original logic of fetching list.
+    const { data: defaultBranches } = useBranches({ limit: 100 });
+
+    // Fetch Branches (for Combobox - To Branch)
+    const { data: toBranches } = useBranches({
+        limit: 20,
+        search: debouncedSearchBranch,
+        sort: "asc",
+        sortBy: "name"
+    });
+
+    const toBranchesList = toBranches?.data || [];
+
+    // Helper to get branch options (for To Branch)
+    const getToBranchOptions = (currentValue: number) => {
+        const cached = selectedBranchCache[currentValue];
+        if (cached) {
+            const exists = toBranchesList.find(b => b.id === cached.id);
+            if (!exists) return [cached, ...toBranchesList];
+        }
+        return toBranchesList;
+    };
+
 
     // Fetch Items (for Form)
     const { data: items } = useItems({
-        page: 1,
-        limit: 100, // Should use debounce/search in real Combobox, for now fetch 100
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc"
     });
 
-    // Valid Items (only with variants)
-    const validItems = useMemo(() => {
-        return items?.data?.filter(i => i.masterItemVariants && i.masterItemVariants.length > 0) || [];
-    }, [items]);
+    const itemsList = items?.data || [];
 
-    // Item Options
-    const itemOptions = useMemo(() => {
-        return validItems.map(i => ({ id: i.id, name: i.name }));
-    }, [validItems]);
+    // Helper to get item options
+    const getItemOptions = (currentValue: number) => {
+        const cached = selectedItemsCache[currentValue];
+        if (cached) {
+            const exists = itemsList.find(i => i.id === cached.id);
+            if (!exists) return [cached, ...itemsList];
+        }
+        return itemsList;
+    };
+
+    // Update caches when detail loads
+    useMemo(() => {
+        if (detailData?.data) {
+            const d = detailData.data;
+            // Cache to branch
+            if (d.to && d.to.id) {
+                setSelectedBranchCache(prev => ({ ...prev, [d.to!.id]: d.to }));
+            }
+            // Cache items
+            if (d.transactionTransferItems) {
+                const newCache = { ...selectedItemsCache };
+                let hasChange = false;
+                d.transactionTransferItems.forEach((item: any) => {
+                    if (item.masterItem && !newCache[item.masterItem.id]) {
+                        newCache[item.masterItem.id] = item.masterItem;
+                        hasChange = true;
+                    }
+                });
+                if (hasChange) setSelectedItemsCache(newCache);
+            }
+        }
+    }, [detailData]);
+
+    const handleBranchSelect = (branchId: number) => {
+        // Find the branch from the combined list of options for 'To Branch'
+        const b = getToBranchOptions(form.getValues("toId")).find(b => b.id === branchId);
+        if (b) {
+            setSelectedBranchCache(prev => ({ ...prev, [b.id]: b }));
+        }
+        form.setValue("toId", branchId);
+    };
+
+    const handleItemSelect = (index: number, itemId: number) => {
+        const item = itemsList.find(i => i.id === itemId);
+        if (item) {
+            setSelectedItemsCache(prev => ({ ...prev, [item.id]: item }));
+        }
+        form.setValue(`items.${index}.masterItemId`, itemId);
+        form.setValue(`items.${index}.masterItemVariantId`, 0); // Reset variant
+    };
 
     // Form
     const form = useForm<CreateTransferFormValues>({
@@ -219,6 +298,8 @@ export default function TransferPage() {
         setIsCreateOpen(open);
         if (!open) {
             setDetailId(null);
+            setSearchItem("");
+            setSearchBranch("");
             form.reset();
         }
     };
@@ -245,13 +326,7 @@ export default function TransferPage() {
         });
     };
 
-    const handleItemSelect = (index: number, itemId: number) => {
-        const item = validItems.find(i => i.id === itemId);
-        if (item) {
-            form.setValue(`items.${index}.masterItemId`, itemId);
-            form.setValue(`items.${index}.masterItemVariantId`, 0); // Reset variant
-        }
-    };
+
 
 
     // Columns
@@ -354,7 +429,7 @@ export default function TransferPage() {
 
             {/* Create / Detail Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-4xl! max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{detailId ? "Detail Transfer" : "Transfer Baru"}</DialogTitle>
                         <DialogDescription>
@@ -460,7 +535,7 @@ export default function TransferPage() {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {branches?.data?.map((b) => (
+                                                    {defaultBranches?.data?.map((b) => (
                                                         <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -472,18 +547,18 @@ export default function TransferPage() {
                                     <FormField control={form.control} name="toId" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Ke Cabang</FormLabel>
-                                            <Select onValueChange={(val) => field.onChange(parseInt(val))} value={field.value ? field.value.toString() : undefined}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Pilih Cabang Tujuan" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {branches?.data?.filter(b => b.id !== form.getValues("fromId")).map((b) => (
-                                                        <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Combobox
+                                                value={field.value}
+                                                onChange={handleBranchSelect}
+                                                options={
+                                                    getToBranchOptions(field.value).filter(b => b.id !== form.getValues("fromId"))
+                                                }
+                                                placeholder="Pilih Cabang Tujuan"
+                                                inputValue={searchBranch}
+                                                onInputChange={setSearchBranch}
+                                                renderLabel={(b) => <span>{b.name}</span>}
+                                                className="w-full"
+                                            />
                                             <FormMessage />
                                         </FormItem>
                                     )} />
@@ -506,23 +581,16 @@ export default function TransferPage() {
                                     <div className="space-y-4">
                                         {fields.map((field, index) => {
                                             const selectedItemId = watchedItems?.[index]?.masterItemId;
-                                            const selectedItem = validItems.find(i => i.id === selectedItemId);
+                                            // Get item details from cache or current list
+                                            const selectedItem = itemsList.find(i => i.id === selectedItemId) || selectedItemsCache[selectedItemId];
                                             const variants = selectedItem?.masterItemVariants || [];
 
                                             // Filter variants: exclude variants selected in other rows
-                                            // Note: AdjustStock filters by ITEM. Requirement here says "Unique Items: Setiap masterItemVariantId harus unique".
-                                            // If user wanted "Unique Item" like AdjustStock, I'd filter at itemOptions level. 
-                                            // Since no explicit "Unique Item" rule for Transfer (and it's not logical for transfer), I'll filter at Variant level.
-                                            // BUT wait, user said "implementasi ... pastikan sesuai ... dan penulisan data table pada halaman lain".
-                                            // And user ALSO said in AdjustStock: "limit duplicate at Item Level".
-                                            // I will stick to "Unique VARIANT" for Transfer as per md doc, unless I see reason to block Item level.
-                                            // Wait, I can allow same Item, different Variant.
-
                                             const otherSelectedVariantIds = watchedItems
                                                 ?.map((item, i) => (i !== index ? item.masterItemVariantId : null))
                                                 .filter((id) => id !== 0 && id != null) || [];
 
-                                            const filteredVariants = variants.filter(v => !otherSelectedVariantIds.includes(v.id));
+                                            const filteredVariants = variants.filter((v: ItemVariant) => !otherSelectedVariantIds.includes(v.id));
 
                                             return (
                                                 <div key={field.id} className="grid grid-cols-12 gap-4 items-end border p-4 rounded-md relative bg-muted/20">
@@ -537,8 +605,11 @@ export default function TransferPage() {
                                                                 <Combobox
                                                                     value={field.value}
                                                                     onChange={(val) => handleItemSelect(index, val)}
-                                                                    options={itemOptions}
+                                                                    options={getItemOptions(field.value)}
                                                                     placeholder="Pilih Barang"
+                                                                    inputValue={searchItem}
+                                                                    onInputChange={setSearchItem}
+                                                                    renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                     className="w-full"
                                                                 />
                                                                 <FormMessage />

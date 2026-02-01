@@ -41,6 +41,7 @@ export interface TransactionAdjustment {
   branch?: Branch;
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
+  items?: TransactionAdjustmentItem[];
 }
 
 export interface CreateTransactionAdjustmentItemDTO {

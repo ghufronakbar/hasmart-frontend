@@ -147,6 +147,8 @@ export default function PurchasePage() {
 
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const { data: purchaseDetail, isLoading: isLoadingDetail } = usePurchase(editingId);
 
     // --- Queries ---
     const { data: purchaseData, isLoading } = usePurchases({
@@ -159,11 +161,41 @@ export default function PurchasePage() {
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
 
-    const { data: suppliers } = useSuppliers({ limit: 100 });
-    const { data: items } = useItems({ limit: 1000 }); // Need a better way for huge item lists (async search)
+    // --- Combobox Search States ---
+    const [searchSupplier, setSearchSupplier] = useState("");
+    const debouncedSearchSupplier = useDebounce(searchSupplier, 200);
 
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const { data: purchaseDetail, isLoading: isLoadingDetail } = usePurchase(editingId);
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+
+    const { data: suppliers } = useSuppliers({
+        limit: 20,
+        search: debouncedSearchSupplier,
+        sortBy: "name",
+        sort: "asc"
+    });
+
+    // Merge detail supplier if editing (to ensure it shows up)
+    const supplierOptions = useMemo(() => {
+        const list = suppliers?.data || [];
+        if (editingId && purchaseDetail?.data?.masterSupplier) {
+            const current = purchaseDetail.data.masterSupplier;
+            if (!list.find(s => s.id === current.id)) {
+                return [current, ...list];
+            }
+        }
+        return list;
+    }, [suppliers?.data, editingId, purchaseDetail]);
+
+
+    const { data: items } = useItems({
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc"
+    });
+
+
 
     // Merge list items with detail items to ensure selected items are in the options list
     const itemOptions = useMemo(() => {
@@ -592,8 +624,10 @@ export default function PurchasePage() {
                                                 <Combobox
                                                     value={field.value}
                                                     onChange={(val) => form.setValue("masterSupplierId", val)}
-                                                    options={suppliers?.data || []}
+                                                    options={supplierOptions}
                                                     placeholder="Pilih Supplier"
+                                                    inputValue={searchSupplier}
+                                                    onInputChange={setSearchSupplier}
                                                     renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.code} ({item.name})</span><span className="text-[10px] text-muted-foreground">{(item as unknown as { masterItemCategory?: { name: string } }).masterItemCategory?.name}</span></div>}
                                                 />
                                                 <FormMessage />
@@ -666,6 +700,8 @@ export default function PurchasePage() {
                                                                         onChange={(val) => handleItemSelect(index, val)}
                                                                         options={itemOptions}
                                                                         placeholder="Pilih Barang"
+                                                                        inputValue={searchItem}
+                                                                        onInputChange={setSearchItem}
                                                                         renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                     />
                                                                     <FormMessage />

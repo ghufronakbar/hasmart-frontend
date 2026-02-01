@@ -35,6 +35,7 @@ export function useSellByInvoice(invoiceNumber: string) {
     queryKey: queryKeys.transaction.sell.byInvoice(invoiceNumber),
     queryFn: () => sellService.getByInvoice(invoiceNumber),
     enabled: !!invoiceNumber,
+    retry: 0,
   });
 }
 

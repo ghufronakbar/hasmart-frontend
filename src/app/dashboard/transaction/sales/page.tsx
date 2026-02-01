@@ -115,6 +115,10 @@ export default function SalesPage() {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
+    // --- Combobox Search States ---
+    const [searchItem, setSearchItem] = useState("");
+    const debouncedSearchItem = useDebounce(searchItem, 200);
+
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -129,7 +133,12 @@ export default function SalesPage() {
         dateEnd: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     });
 
-    const { data: items } = useItems({ limit: 1000 });
+    const { data: items } = useItems({
+        limit: 20,
+        search: debouncedSearchItem,
+        sortBy: "name",
+        sort: "asc"
+    });
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const { data: salesDetail, isLoading: isLoadingDetail } = useSales(editingId);
@@ -139,7 +148,7 @@ export default function SalesPage() {
         const listItems = items?.data || [];
         if (!editingId || !salesDetail?.data) return listItems;
 
-        const detailItems = (salesDetail.data.transactionSalesItems || salesDetail.data.items || [])?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
+        const detailItems = (salesDetail.data.transactionSalesItems || [])?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
 
         // Use Map to deduplicate by ID
         const map = new Map();
@@ -170,6 +179,7 @@ export default function SalesPage() {
         if (!open) {
             setEditingId(null);
             setMemberVerified(null);
+            setSearchItem("");
             form.reset({ branchId: branch?.id, items: [], memberCode: "", notes: "" });
         }
     };
@@ -343,7 +353,7 @@ export default function SalesPage() {
     useEffect(() => {
         if (editingId && salesDetail?.data) {
             const sales = salesDetail.data;
-            const currentItems = sales.transactionSalesItems || sales.items || [];
+            const currentItems = sales.transactionSalesItems || [];
 
             if (sales.masterMember) {
                 setMemberVerified(sales.masterMember);
@@ -608,6 +618,8 @@ export default function SalesPage() {
                                                                         onChange={(val) => handleItemSelect(index, val)}
                                                                         options={itemOptions}
                                                                         placeholder="Pilih Barang"
+                                                                        inputValue={searchItem}
+                                                                        onInputChange={setSearchItem}
                                                                         renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.name}</span></div>}
                                                                     />
                                                                     <FormMessage />

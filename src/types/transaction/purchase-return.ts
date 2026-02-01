@@ -33,6 +33,11 @@ export interface PurchaseReturn {
   items: PurchaseReturnItem[];
   // Backend response might have items here
   transactionPurchaseReturnItems?: PurchaseReturnItem[];
+
+  // Relations & Helper fields
+  transactionPurchase?: { invoiceNumber: string };
+  originalInvoiceNumber?: string;
+
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -55,6 +60,7 @@ export interface CreatePurchaseReturnDTO {
   notes?: string | null;
   taxPercentage: number;
   items: CreatePurchaseReturnItemDTO[];
+  originalInvoiceNumber: string;
 }
 
 export type UpdatePurchaseReturnDTO = CreatePurchaseReturnDTO;

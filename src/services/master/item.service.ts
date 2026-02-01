@@ -10,7 +10,9 @@ import {
 } from "@/types/master/item";
 
 export const itemService = {
-  list: async (params?: FilterQuery & { branchId?: number }) => {
+  list: async (
+    params?: FilterQuery & { branchId?: number; idNotIns?: string },
+  ) => {
     const response = await axiosInstance.get<ItemListResponse>("/master/item", {
       params,
     });
