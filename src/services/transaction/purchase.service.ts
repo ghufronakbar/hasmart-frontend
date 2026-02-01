@@ -46,6 +46,34 @@ export const purchaseService = {
     return response.data;
   },
 
+  getByInvoice: async (invoiceNumber: string) => {
+    const response = await axiosInstance.get<PurchaseResponse>(
+      `/transaction/purchase/${invoiceNumber}/invoice`,
+    );
+    // Map backend response to frontend model
+    if (response.data && response.data.data) {
+      // Safe cast to access potential different property name
+      const d = response.data.data as Purchase & {
+        transactionPurchaseItems?: import("@/types/transaction/purchase").PurchaseItem[];
+      };
+      if (d.transactionPurchaseItems && (!d.items || d.items.length === 0)) {
+        // Map items and their nested discounts
+        d.items = d.transactionPurchaseItems.map((item) => ({
+          ...item,
+          discounts:
+            (
+              item as unknown as {
+                transactionPurchaseDiscounts?: { percentage: number }[];
+              }
+            ).transactionPurchaseDiscounts ||
+            item.discounts ||
+            [],
+        }));
+      }
+    }
+    return response.data;
+  },
+
   create: async (data: CreatePurchaseDTO) => {
     const response = await axiosInstance.post<PurchaseResponse>(
       "/transaction/purchase",

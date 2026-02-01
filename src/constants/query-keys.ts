@@ -82,6 +82,12 @@ export const queryKeys = {
         [...queryKeys.transaction.purchase.all, "list", params] as const,
       detail: (id: number | string) =>
         [...queryKeys.transaction.purchase.all, "detail", id] as const,
+      byInvoice: (invoiceNumber: string) =>
+        [
+          ...queryKeys.transaction.purchase.all,
+          "byInvoice",
+          invoiceNumber,
+        ] as const,
     },
     purchaseReturn: {
       all: ["transaction", "purchase-return"] as const,
@@ -96,6 +102,12 @@ export const queryKeys = {
         [...queryKeys.transaction.sales.all, "list", params] as const,
       detail: (id: number | string) =>
         [...queryKeys.transaction.sales.all, "detail", id] as const,
+      byInvoice: (invoiceNumber: string) =>
+        [
+          ...queryKeys.transaction.sales.all,
+          "byInvoice",
+          invoiceNumber,
+        ] as const,
     },
     salesReturn: {
       all: ["transaction", "sales-return"] as const,
@@ -110,6 +122,12 @@ export const queryKeys = {
         [...queryKeys.transaction.sell.all, "list", params] as const,
       detail: (id: number | string) =>
         [...queryKeys.transaction.sell.all, "detail", id] as const,
+      byInvoice: (invoiceNumber: string) =>
+        [
+          ...queryKeys.transaction.sell.all,
+          "byInvoice",
+          invoiceNumber,
+        ] as const,
     },
     sellReturn: {
       all: ["transaction", "sell-return"] as const,

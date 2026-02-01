@@ -30,6 +30,14 @@ export function usePurchase(id: number | null) {
   });
 }
 
+export function usePurchaseByInvoice(invoiceNumber: string) {
+  return useQuery({
+    queryKey: queryKeys.transaction.purchase.byInvoice(invoiceNumber),
+    queryFn: () => purchaseService.getByInvoice(invoiceNumber),
+    enabled: !!invoiceNumber,
+  });
+}
+
 export function useCreatePurchase() {
   const queryClient = useQueryClient();
 

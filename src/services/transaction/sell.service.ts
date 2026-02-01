@@ -43,6 +43,32 @@ export const sellService = {
     return response.data;
   },
 
+  getByInvoice: async (invoiceNumber: string) => {
+    const response = await axiosInstance.get<SellResponse>(
+      `/transaction/sell/${invoiceNumber}/invoice`,
+    );
+    // Map backend response to frontend model
+    if (response.data && response.data.data) {
+      const d = response.data.data as Sell & {
+        transactionSellItems?: import("@/types/transaction/sell").SellItem[];
+      };
+      if (d.transactionSellItems && (!d.items || d.items.length === 0)) {
+        d.items = d.transactionSellItems.map((item) => ({
+          ...item,
+          discounts:
+            (
+              item as unknown as {
+                transactionSellDiscounts?: { percentage: number }[];
+              }
+            ).transactionSellDiscounts ||
+            item.discounts ||
+            [],
+        }));
+      }
+    }
+    return response.data;
+  },
+
   create: async (data: CreateSellDTO) => {
     const response = await axiosInstance.post<SellResponse>(
       "/transaction/sell",

@@ -34,6 +34,10 @@ export interface SellReturn {
   items: SellReturnItem[];
   // Backend response might include this for mapping
   transactionSellReturnItems?: SellReturnItem[];
+  transactionSellId?: number;
+  transactionSell?: { invoiceNumber: string };
+  transactionSellInvoiceNumber?: string; // Optional flattened field
+  originalInvoiceNumber?: string; // For form compatibility
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -55,6 +59,8 @@ export interface CreateSellReturnDTO {
   notes?: string | null;
   taxPercentage?: number;
   items: CreateSellReturnItemDTO[];
+  originalInvoiceNumber?: string;
+  invoiceNumber?: string; // Allow manual override if needed?
 }
 
 export type UpdateSellReturnDTO = Partial<CreateSellReturnDTO>;

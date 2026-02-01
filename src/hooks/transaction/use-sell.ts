@@ -30,6 +30,14 @@ export function useSell(id: number | null) {
   });
 }
 
+export function useSellByInvoice(invoiceNumber: string) {
+  return useQuery({
+    queryKey: queryKeys.transaction.sell.byInvoice(invoiceNumber),
+    queryFn: () => sellService.getByInvoice(invoiceNumber),
+    enabled: !!invoiceNumber,
+  });
+}
+
 export function useCreateSell() {
   const queryClient = useQueryClient();
 

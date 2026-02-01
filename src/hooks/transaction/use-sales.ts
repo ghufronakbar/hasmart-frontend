@@ -30,6 +30,14 @@ export function useSales(id: number | null) {
   });
 }
 
+export function useSalesByInvoice(invoiceNumber: string) {
+  return useQuery({
+    queryKey: queryKeys.transaction.sales.byInvoice(invoiceNumber),
+    queryFn: () => salesService.getByInvoice(invoiceNumber),
+    enabled: !!invoiceNumber,
+  });
+}
+
 export function useCreateSales() {
   const queryClient = useQueryClient();
 

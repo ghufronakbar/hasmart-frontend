@@ -23,6 +23,13 @@ export const salesService = {
     return response.data;
   },
 
+  getByInvoice: async (invoiceNumber: string) => {
+    const response = await axiosInstance.get<SalesResponse>(
+      `/transaction/sales/${invoiceNumber}/invoice`,
+    );
+    return response.data;
+  },
+
   create: async (data: CreateSalesDTO) => {
     const response = await axiosInstance.post<SalesResponse>(
       "/transaction/sales",
