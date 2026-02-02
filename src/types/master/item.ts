@@ -4,7 +4,6 @@ import { Supplier } from "./supplier";
 
 export interface ItemVariant {
   id: number;
-  code: string;
   unit: string;
   amount: number;
   sellPrice: number;
@@ -20,6 +19,7 @@ export interface ItemVariant {
 export interface Item {
   id: number;
   name: string;
+  code: string;
   masterItemCategoryId: number;
   masterSupplierId: number;
   isActive: boolean;
@@ -34,7 +34,6 @@ export interface Item {
 }
 
 export interface CreateItemVariantDTO {
-  code: string;
   unit: string;
   amount: number;
   sellPrice: number;
@@ -43,6 +42,7 @@ export interface CreateItemVariantDTO {
 
 export interface CreateItemDTO {
   name: string;
+  code: string;
   masterSupplierId: number;
   masterItemCategoryId: number;
   isActive: boolean;
@@ -61,8 +61,5 @@ export type UpdateItemVariantDTO = Partial<CreateItemVariantDTO>;
 export type ItemResponse = BaseResponse<Item>;
 export type ItemListResponse = BaseResponse<Item[]>;
 
-export interface ItemVariantWithItem extends ItemVariant {
-  masterItem: Item;
-}
-
-export type ItemVariantResponse = BaseResponse<ItemVariantWithItem>;
+// Updated: getItemByCode now returns Item (not ItemVariantWithItem)
+export type ItemByCodeResponse = BaseResponse<Item>;

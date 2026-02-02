@@ -218,7 +218,7 @@ export default function PointOfSalesPage() {
                 salesPrice: defaultVariant.sellPrice,
                 discounts: [],
                 name: item.name,
-                variantName: defaultVariant.code,
+                variantName: `${defaultVariant.unit} (${defaultVariant.amount})`,
                 unit: defaultVariant.unit,
                 amount: defaultVariant.amount,
                 variants: item.masterItemVariants // Save for UI switching
@@ -241,27 +241,28 @@ export default function PointOfSalesPage() {
 
             try {
                 // Use service directly for event-based fetching
-                const res = await itemService.getVariantByCode(code);
+                // Now returns Item (with code at item level)
+                const res = await itemService.getItemByCode(code);
 
                 if (res.data) {
-                    // Service returns response.data which is ItemVariantResponse (BaseResponse<ItemVariantWithItem>)
-                    // So res.data is ItemVariantWithItem.
-                    // Actually let's check item.service.ts again.
-                    // getVariantByCode returns response.data.
-                    // The hook uses it.
-                    // Here we use service directly.
-
-                    const variantWithItem = res.data;
-                    if (!variantWithItem) {
+                    const item = res.data;
+                    if (!item) {
                         toast.error("Item tidak ditemukan (No Data)");
                         return;
                     }
 
-                    const item = variantWithItem.masterItem;
+                    // Get base unit variant (amount === 1) or first variant
+                    const baseVariant = item.masterItemVariants.find(v => v.isBaseUnit)
+                        || item.masterItemVariants[0];
 
-                    // Add to cart logic (similar to handleAddItem but we have the specific variant)
+                    if (!baseVariant) {
+                        toast.error("Item tidak memiliki variant");
+                        return;
+                    }
+
+                    // Add to cart logic
                     const existingIndex = watchedItems.findIndex(
-                        line => line.masterItemId === item.id && line.masterItemVariantId === variantWithItem.id
+                        line => line.masterItemId === item.id && line.masterItemVariantId === baseVariant.id
                     );
 
                     if (existingIndex >= 0) {
@@ -275,14 +276,14 @@ export default function PointOfSalesPage() {
                     } else {
                         append({
                             masterItemId: item.id,
-                            masterItemVariantId: variantWithItem.id,
+                            masterItemVariantId: baseVariant.id,
                             qty: 1,
-                            salesPrice: variantWithItem.sellPrice,
+                            salesPrice: baseVariant.sellPrice,
                             discounts: [],
                             name: item.name,
-                            variantName: variantWithItem.code,
-                            unit: variantWithItem.unit,
-                            amount: variantWithItem.amount,
+                            variantName: `${baseVariant.unit} (${baseVariant.amount})`,
+                            unit: baseVariant.unit,
+                            amount: baseVariant.amount,
                             variants: item.masterItemVariants
                         });
                         setLastAddedIndex(fields.length);
@@ -312,7 +313,7 @@ export default function PointOfSalesPage() {
             update(index, {
                 ...item,
                 masterItemVariantId: newVariant.id,
-                variantName: newVariant.code,
+                variantName: `${newVariant.unit} (${newVariant.amount})`,
                 unit: newVariant.unit,
                 amount: newVariant.amount,
                 salesPrice: newVariant.sellPrice
@@ -520,9 +521,9 @@ export default function PointOfSalesPage() {
                                                             <SelectContent>
                                                                 {values.variants.map((v: ItemVariant) => (
                                                                     <SelectItem key={v.id} value={v.id.toString()} className="text-xs">
-                                                                        <span className="font-medium">{v.code}</span>
+                                                                        <span className="font-medium">{v.unit}</span>
                                                                         <span className="text-muted-foreground ml-1">
-                                                                            ({v.unit} @{v.amount})
+                                                                            (@{v.amount})
                                                                         </span>
                                                                     </SelectItem>
                                                                 ))}

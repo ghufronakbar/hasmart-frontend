@@ -7,7 +7,7 @@ import {
   ItemResponse,
   UpdateItemDTO,
   UpdateItemVariantDTO,
-  ItemVariantResponse,
+  ItemByCodeResponse,
 } from "@/types/master/item";
 
 export const itemService = {
@@ -82,9 +82,9 @@ export const itemService = {
     return response.data;
   },
 
-  getVariantByCode: async (code: string) => {
-    const response = await axiosInstance.get<ItemVariantResponse>(
-      `/master/item/${code}/variant`,
+  getItemByCode: async (code: string) => {
+    const response = await axiosInstance.get<ItemByCodeResponse>(
+      `/master/item/code/${code}`,
     );
     return response.data;
   },

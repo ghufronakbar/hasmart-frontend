@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -10,15 +10,14 @@ import {
     Plus,
     Pencil,
     Trash2,
-    Search,
     ChevronLeft,
     ChevronRight,
     CirclePlus,
     X,
-
+    ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PaginationState } from "@tanstack/react-table";
+import { PaginationState, SortingState } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,7 +88,6 @@ import { AxiosError } from "axios";
 
 const variantSchema = z.object({
     id: z.number().optional(), // For edit
-    code: z.string().min(1, "Kode variant wajib"),
     unit: z.string().min(1, "Satuan wajib"),
     amount: z.coerce.number().min(1, "Jumlah konversi min 1"),
     sellPrice: z.coerce.number().min(0, "Harga jual min 0"),
@@ -98,6 +96,7 @@ const variantSchema = z.object({
 
 const createItemSchema = z.object({
     name: z.string().min(1, "Nama item wajib"),
+    code: z.string().min(1, "Kode item wajib"),
     masterSupplierId: z.coerce.number().min(1, "Supplier wajib"),
     masterItemCategoryId: z.coerce.number().min(1, "Kategori wajib"),
     isActive: z.boolean().default(true),
@@ -136,6 +135,7 @@ export default function ItemsPage() {
         pageIndex: 0,
         pageSize: 10,
     });
+    const [sorting, setSorting] = useState<SortingState>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -144,6 +144,8 @@ export default function ItemsPage() {
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: debouncedSearch,
+        sort: sorting[0]?.desc ? "desc" : "asc",
+        sortBy: sorting[0]?.id,
     });
     const { data: suppliers } = useSuppliers({ limit: 100 });
     const { data: categories } = useItemCategories({ limit: 100 });
@@ -170,11 +172,11 @@ export default function ItemsPage() {
         resolver: zodResolver(createItemSchema) as any,
         defaultValues: {
             name: "",
+            code: "",
             masterSupplierId: 0,
             masterItemCategoryId: 0,
             isActive: true,
             masterItemVariants: [{
-                code: "",
                 unit: "",
                 amount: 1, // Default base unit
                 sellPrice: 0,
@@ -231,7 +233,6 @@ export default function ItemsPage() {
     const variantForm = useForm<VariantFormValues>({
         resolver: zodResolver(variantSchema) as any,
         defaultValues: {
-            code: "",
             unit: "",
             amount: 1,
             sellPrice: 0,
@@ -279,7 +280,6 @@ export default function ItemsPage() {
     const openAddVariant = () => {
         setEditingVariant(null);
         variantForm.reset({
-            code: "",
             unit: "",
             amount: 1,
             sellPrice: 0,
@@ -291,7 +291,6 @@ export default function ItemsPage() {
     const openEditVariant = (variant: ItemVariant) => {
         setEditingVariant(variant);
         variantForm.reset({
-            code: variant.code,
             unit: variant.unit,
             amount: variant.amount,
             sellPrice: variant.sellPrice,
@@ -402,14 +401,25 @@ export default function ItemsPage() {
             </div>
 
             {/* Filter */}
-            <div className="flex items-center space-x-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder="Cari item..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-8 w-[150px] lg:w-[250px]"
-                />
+            <div className="flex items-center justify-between">
+                <div className="flex flex-1 items-center space-x-2">
+                    <Input
+                        placeholder="Cari item..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-8 w-[150px] lg:w-[250px]"
+                    />
+                    {searchTerm && (
+                        <Button
+                            variant="ghost"
+                            onClick={() => setSearchTerm("")}
+                            className="h-8 px-2 lg:px-3"
+                        >
+                            Reset
+                            <X className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Custom Table with Rowspan */}
@@ -417,8 +427,32 @@ export default function ItemsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[50px]">ID</TableHead>
-                            <TableHead>Nama Item</TableHead>
+                            <TableHead className="w-[100px]">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSorting(prev => {
+                                        const isDesc = prev[0]?.id === "code" && !prev[0]?.desc;
+                                        return [{ id: "code", desc: isDesc }];
+                                    })}
+                                    className="-ml-4"
+                                >
+                                    Kode
+                                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSorting(prev => {
+                                        const isDesc = prev[0]?.id === "name" && !prev[0]?.desc;
+                                        return [{ id: "name", desc: isDesc }];
+                                    })}
+                                    className="-ml-4"
+                                >
+                                    Nama Item
+                                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </TableHead>
                             <TableHead>Harga Beli <span className="text-xs text-muted-foreground">(satuan)</span></TableHead>
                             <TableHead>Stok</TableHead>
                             <TableHead>Variant</TableHead>
@@ -452,7 +486,7 @@ export default function ItemsPage() {
                                         {index === 0 && (
                                             <>
                                                 <TableCell rowSpan={rowSpan} className="align-top font-medium border-r">
-                                                    {item.id}
+                                                    {item.code}
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
                                                     <div className="font-semibold">{item.name}</div>
@@ -479,7 +513,7 @@ export default function ItemsPage() {
                                             </>
                                         )}
                                         <TableCell>
-                                            <span className="font-mono text-xs">{variant.code}</span>
+                                            <span className="font-mono text-xs">{variant.unit}</span>
                                             {variant.isBaseUnit && <Badge variant="secondary" className="ml-2 text-[10px]">Base</Badge>}
                                         </TableCell>
                                         <TableCell>{variant.unit}</TableCell>
@@ -511,29 +545,47 @@ export default function ItemsPage() {
                 </Table>
             </div>
 
-            {/* Pagination Manual */}
-            <div className="flex items-center justify-end space-x-2 py-4">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex - 1 }))}
-                    disabled={pagination.pageIndex === 0}
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                </Button>
-                <div className="text-sm">
-                    Page {pagination.pageIndex + 1} of {itemData?.pagination?.totalPages || 1}
+            {/* Pagination */}
+            <div className="flex items-center justify-end py-4 w-full">
+                <div className="flex items-center justify-between space-x-2">
+                    <div className="flex items-center space-x-2">
+                        <p className="text-sm text-muted-foreground">Rows per page</p>
+                        <Select
+                            value={`${pagination.pageSize}`}
+                            onValueChange={(value) => setPagination(p => ({ ...p, pageIndex: 0, pageSize: Number(value) }))}
+                        >
+                            <SelectTrigger className="h-8 w-[70px]">
+                                <SelectValue placeholder={pagination.pageSize} />
+                            </SelectTrigger>
+                            <SelectContent side="top">
+                                {[10, 20, 30, 40, 50].map((pageSize) => (
+                                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                                        {pageSize}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                        Page {pagination.pageIndex + 1} of {itemData?.pagination?.totalPages || 1}
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex - 1 }))}
+                        disabled={pagination.pageIndex === 0}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex + 1 }))}
+                        disabled={!itemData?.pagination?.hasNextPage}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex + 1 }))}
-                    disabled={!itemData?.pagination?.hasNextPage}
-                >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
             </div>
 
             {/* --- CREATE Dialog --- */}
@@ -548,9 +600,16 @@ export default function ItemsPage() {
                             {/* Section 1: Item Info */}
                             <div className="grid grid-cols-2 gap-4 border-b pb-4">
                                 <FormField control={createForm.control} name="name" render={({ field }) => (
-                                    <FormItem className="col-span-2">
+                                    <FormItem>
                                         <FormLabel>Nama Item</FormLabel>
                                         <FormControl><Input placeholder="Contoh: Indomie Goreng" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={createForm.control} name="code" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Kode Item</FormLabel>
+                                        <FormControl><Input placeholder="Contoh: IND001" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
@@ -592,7 +651,7 @@ export default function ItemsPage() {
                             <div>
                                 <div className="flex justify-between items-center mb-2">
                                     <h3 className="text-lg font-medium">Variants</h3>
-                                    <Button type="button" variant="outline" size="sm" onClick={() => append({ code: "", unit: "", amount: 1, sellPrice: 0, isBaseUnit: false })}>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => append({ unit: "", amount: 1, sellPrice: 0, isBaseUnit: false })}>
                                         <CirclePlus className="mr-2 h-4 w-4" /> Tambah Variant
                                     </Button>
                                 </div>
@@ -604,14 +663,7 @@ export default function ItemsPage() {
                                                     <X className="h-4 w-4" />
                                                 </Button>
                                             )}
-                                            <div className="grid grid-cols-4 gap-4 w-full">
-                                                <FormField control={createForm.control} name={`masterItemVariants.${index}.code`} render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-xs">Kode</FormLabel>
-                                                        <FormControl><Input {...field} placeholder="Kode unik" /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} />
+                                            <div className="grid grid-cols-3 gap-4 w-full">
                                                 <FormField control={createForm.control} name={`masterItemVariants.${index}.unit`} render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel className="text-xs">Satuan</FormLabel>
@@ -737,7 +789,6 @@ export default function ItemsPage() {
                                 <TableBody>
                                     {editingItem?.masterItemVariants?.map(v => (
                                         <TableRow key={v.id}>
-                                            <TableCell>{v.code}</TableCell>
                                             <TableCell>{v.unit}</TableCell>
                                             <TableCell>{v.amount}</TableCell>
                                             <TableCell>{v.sellPrice}</TableCell>
@@ -766,13 +817,6 @@ export default function ItemsPage() {
                     </DialogHeader>
                     <Form {...variantForm}>
                         <form onSubmit={variantForm.handleSubmit(onVariantSubmit)} className="space-y-4">
-                            <FormField control={variantForm.control} name="code" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Kode Variant</FormLabel>
-                                    <FormControl><Input {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField control={variantForm.control} name="unit" render={({ field }) => (
                                     <FormItem>
@@ -823,7 +867,7 @@ export default function ItemsPage() {
             </AlertDialog>
             <AlertDialog open={!!deletingVariant} onOpenChange={(o) => !o && setDeletingVariant(null)}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><DialogTitle>Hapus Variant {deletingVariant?.variant.code}?</DialogTitle></AlertDialogHeader>
+                    <AlertDialogHeader><DialogTitle>Hapus Variant {deletingVariant?.variant.unit}?</DialogTitle></AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteVariant} className="bg-red-600">Hapus</AlertDialogAction>

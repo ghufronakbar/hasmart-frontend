@@ -858,7 +858,7 @@ export default function SellReturnPage() {
                                                                                 <SelectContent>
                                                                                     {variants.map((v: ItemVariant) => (
                                                                                         <SelectItem key={v.id} value={v.id.toString()}>
-                                                                                            {v.code} - {v.unit}
+                                                                                            {v.unit} ({v.amount})
                                                                                         </SelectItem>
                                                                                     ))}
                                                                                 </SelectContent>

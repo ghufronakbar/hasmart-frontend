@@ -458,7 +458,7 @@ export default function AdjustStockPage() {
                                 </div>
                                 <div>
                                     <span className="font-semibold block">Variant</span>
-                                    <span>{detailData.data?.masterItemVariant?.code} ({detailData.data?.masterItemVariant?.unit})</span>
+                                    <span>{detailData.data?.masterItemVariant?.unit} ({detailData.data?.masterItemVariant?.amount})</span>
                                 </div>
                                 <div>
                                     <span className="font-semibold block">Stok Awal</span>
@@ -583,7 +583,7 @@ export default function AdjustStockPage() {
                                                                     <SelectContent>
                                                                         {variants.map((v: ItemVariant) => (
                                                                             <SelectItem key={v.id} value={v.id.toString()}>
-                                                                                {v.code} - {v.unit}
+                                                                                {v.unit} ({v.amount})
                                                                             </SelectItem>
                                                                         ))}
                                                                     </SelectContent>

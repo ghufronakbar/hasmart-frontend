@@ -471,7 +471,7 @@ export default function TransferPage() {
                                                 {detailData.data?.transactionTransferItems?.map((item) => (
                                                     <tr key={item.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                                         <td className="p-4 align-middle">{item.masterItem?.name}</td>
-                                                        <td className="p-4 align-middle">{item.masterItemVariant?.code} ({item.masterItemVariant?.unit})</td>
+                                                        <td className="p-4 align-middle">{item.masterItemVariant?.unit} ({item.masterItemVariant?.amount})</td>
                                                         <td className="p-4 align-middle text-right font-mono font-bold">{item.qty}</td>
                                                     </tr>
                                                 ))}
@@ -625,7 +625,7 @@ export default function TransferPage() {
                                                                     <SelectContent>
                                                                         {filteredVariants.map((v: ItemVariant) => (
                                                                             <SelectItem key={v.id} value={v.id.toString()}>
-                                                                                {v.code} - {v.unit}
+                                                                                {v.unit} ({v.amount})
                                                                             </SelectItem>
                                                                         ))}
                                                                     </SelectContent>

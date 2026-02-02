@@ -143,10 +143,10 @@ export function useDeleteVariant() {
   });
 }
 
-export function useItemVariantByCode(code: string | undefined) {
+export function useItemByCode(code: string | undefined) {
   return useQuery({
-    queryKey: ["master", "item", "variant", "by-code", code],
-    queryFn: () => itemService.getVariantByCode(code!),
+    queryKey: ["master", "item", "by-code", code],
+    queryFn: () => itemService.getItemByCode(code!),
     enabled: !!code,
   });
 }
