@@ -434,11 +434,12 @@ export default function ItemsPage() {
                         <TableRow>
                             <TableHead className="w-[50px]">ID</TableHead>
                             <TableHead>Nama Item</TableHead>
-                            <TableHead>Harga Beli</TableHead>
+                            <TableHead>Harga Beli <span className="text-xs text-muted-foreground">(satuan)</span></TableHead>
                             <TableHead>Stok</TableHead>
                             <TableHead>Variant</TableHead>
                             <TableHead>Unit</TableHead>
                             <TableHead>Konversi</TableHead>
+                            <TableHead>Estimasi Keuntungan</TableHead>
                             <TableHead>Harga Jual</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
@@ -485,7 +486,7 @@ export default function ItemsPage() {
                                                     ) : "-"}
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
-                                                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(item.masterItemVariants?.[0].sellPrice)}
+                                                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(item.recordedBuyPrice)}
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
                                                     {item.stock}
@@ -498,6 +499,9 @@ export default function ItemsPage() {
                                         </TableCell>
                                         <TableCell>{variant.unit}</TableCell>
                                         <TableCell>{variant.amount}</TableCell>
+                                        <TableCell>
+                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(variant.recordedProfitAmount)} ({variant.recordedProfitPercentage}%)
+                                        </TableCell>
                                         <TableCell>
                                             {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(variant.sellPrice)}
                                         </TableCell>

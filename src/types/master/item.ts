@@ -8,6 +8,8 @@ export interface ItemVariant {
   unit: string;
   amount: number;
   sellPrice: number;
+  recordedProfitPercentage: number;
+  recordedProfitAmount: number;
   isBaseUnit: boolean;
   masterItemId: number;
   createdAt: string;
