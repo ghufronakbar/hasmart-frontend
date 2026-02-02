@@ -144,6 +144,17 @@ export const queryKeys = {
         [...queryKeys.transaction.transfers.all, "detail", id] as const,
     },
   },
+  overview: {
+    all: ["overview"] as const,
+    financialSummary: (params?: unknown) =>
+      [...queryKeys.overview.all, "financial-summary", params] as const,
+    salesTrend: (params?: unknown) =>
+      [...queryKeys.overview.all, "sales-trend", params] as const,
+    topProducts: (params?: unknown) =>
+      [...queryKeys.overview.all, "top-products", params] as const,
+    stockAlerts: (params?: unknown) =>
+      [...queryKeys.overview.all, "stock-alerts", params] as const,
+  },
 };
 
 export const invalidationMap = {
