@@ -54,7 +54,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
 } from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import {
     Table,
     TableBody,
@@ -63,8 +63,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 
 import { Item, ItemVariant } from "@/types/master/item";
 import {
@@ -125,7 +126,7 @@ const updateItemSchema = z.object({
 
 type CreateItemFormValues = z.infer<typeof createItemSchema>;
 type UpdateItemFormValues = z.infer<typeof updateItemSchema>;
-type VariantFormValues = z.infer<typeof variantSchema>;
+
 
 
 
@@ -159,16 +160,18 @@ export default function ItemsPage() {
     const { mutate: deleteVariant } = useDeleteVariant();
 
     // --- Dialog States ---
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
     const [editingItem, setEditingItem] = useState<Item | null>(null);
 
-    const [deletingItem, setDeletingItem] = useState<Item | null>(null);
-    const [deletingVariant, setDeletingVariant] = useState<{ itemId: number, variant: ItemVariant } | null>(null);
+    // Variant tracking for edit mode
+    const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);
+    const [originalVariants, setOriginalVariants] = useState<ItemVariant[]>([]);
 
-    // --- Forms ---
-    // 1. Create Form
-    const createForm = useForm<CreateItemFormValues>({
+    const [deletingItem, setDeletingItem] = useState<Item | null>(null);
+
+    // --- Unified Form ---
+    const unifiedForm = useForm<CreateItemFormValues>({
         resolver: zodResolver(createItemSchema) as any,
         defaultValues: {
             name: "",
@@ -178,15 +181,22 @@ export default function ItemsPage() {
             isActive: true,
             masterItemVariants: [{
                 unit: "",
-                amount: 1, // Default base unit
+                amount: 1,
                 sellPrice: 0,
-                isBaseUnit: true // Default true for first one
-            }],
+                isBaseUnit: true
+            },
+            {
+                unit: "",
+                amount: 12,
+                sellPrice: 0,
+                isBaseUnit: false
+            }
+            ],
         },
     });
 
     const { fields: variantFields, append, remove } = useFieldArray({
-        control: createForm.control,
+        control: unifiedForm.control,
         name: "masterItemVariants",
     });
 
@@ -194,179 +204,183 @@ export default function ItemsPage() {
 
     // Effect to auto-set isBaseUnit based on amount = 1
     useEffect(() => {
-        const subscription = createForm.watch((value, { name }) => {
+        const subscription = unifiedForm.watch((value, { name }) => {
             if (name?.includes('amount')) {
-                // If amount changes, we might need to update isBaseUnit for that specific field
-                // But useWatch is better for handling the whole array state.
-                // Actually, let's just do it in onSubmit or let the user see it? 
-                // User requirement: "hilangkan check base unit, itu buat otomatis saja... jika konversi = 1 maka base unit true"
-                // Ideally, we update the form value for isBaseUnit hidden field.
-
-                // Let's iterate and update. Note: avoid infinite loops.
-                // We can't use setValue inside watch effect easily without care.
-                // A better approach: calculate isBaseUnit during submission OR use a transform in Zod?
-                // But the user might want visual feedback if we showed the checkbox. Since we hide it,
-                // we can just derive it at submit time.
-                // HOWEVER, the validation "tidak bisa menambahkan varian dengan konversi 1 lagi" needs immediate feedback preferably.
-                // Zod resolver handles the validation feedback.
+                // Zod resolver handles the validation feedback
             }
         });
         return () => subscription.unsubscribe();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [createForm.watch]);
-
-    // 2. Edit Item Form (Info Only)
-    const editItemForm = useForm<UpdateItemFormValues>({
-        resolver: zodResolver(updateItemSchema) as any,
-        defaultValues: {
-            name: "",
-            masterSupplierId: 0,
-            masterItemCategoryId: 0,
-            isActive: true,
-        },
-    });
-
-    // 3. Variant Management Form (Single Variant Add/Edit)
-    const [variantDialogOpen, setVariantDialogOpen] = useState(false);
-    const [editingVariant, setEditingVariant] = useState<ItemVariant | null>(null);
-
-    const variantForm = useForm<VariantFormValues>({
-        resolver: zodResolver(variantSchema) as any,
-        defaultValues: {
-            unit: "",
-            amount: 1,
-            sellPrice: 0,
-            isBaseUnit: false,
-        },
-    });
+    }, [unifiedForm.watch]);
 
     // --- Handlers ---
 
-    // Create Item
-    const onCreateSubmit = (values: CreateItemFormValues) => {
-        // Auto-assign isBaseUnit based on amount
+    // Open form for creating
+    const handleOpenCreate = () => {
+        setFormMode('create');
+        setEditingItem(null);
+        setVariantsToDelete([]);
+        setOriginalVariants([]);
+        unifiedForm.reset({
+            name: "",
+            code: "",
+            masterSupplierId: 0,
+            masterItemCategoryId: 0,
+            isActive: true,
+            masterItemVariants: [{
+                unit: "",
+                amount: 1,
+                sellPrice: 0,
+                isBaseUnit: true
+            },
+            {
+                unit: "",
+                amount: 12,
+                sellPrice: 0,
+                isBaseUnit: false
+            }],
+        });
+        setIsFormOpen(true);
+    };
+
+    // Open form for editing
+    const handleOpenEdit = (item: Item) => {
+        setFormMode('edit');
+        setEditingItem(item);
+        setOriginalVariants(item.masterItemVariants || []);
+        setVariantsToDelete([]);
+
+        unifiedForm.reset({
+            name: item.name,
+            code: item.code,
+            masterSupplierId: item.masterSupplierId,
+            masterItemCategoryId: item.masterItemCategoryId,
+            isActive: item.isActive,
+            masterItemVariants: item.masterItemVariants?.map(v => ({
+                id: v.id,
+                unit: v.unit,
+                amount: v.amount,
+                sellPrice: v.sellPrice,
+                isBaseUnit: v.isBaseUnit,
+            })) || [],
+        });
+        setIsFormOpen(true);
+    };
+
+    // Submit handler for unified form
+    const onUnifiedSubmit = async (values: CreateItemFormValues) => {
         const processedVariants = values.masterItemVariants.map(v => ({
             ...v,
             isBaseUnit: v.amount === 1
         }));
 
-        createItem({ ...values, masterItemVariants: processedVariants }, {
-            onSuccess: () => {
-                setIsCreateOpen(false);
-                createForm.reset();
-                toast.success("Item berhasil dibuat");
-            },
-            onError: (err) => {
-                toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item");
+        if (formMode === 'create') {
+            // Create mode
+            createItem({ ...values, masterItemVariants: processedVariants }, {
+                onSuccess: () => {
+                    setIsFormOpen(false);
+                    toast.success("Item berhasil dibuat");
+                },
+                onError: (err) => {
+                    toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item");
+                }
+            });
+        } else {
+            // Edit mode
+            if (!editingItem) return;
+
+            const itemData: UpdateItemFormValues = {
+                name: values.name,
+                masterSupplierId: values.masterSupplierId,
+                masterItemCategoryId: values.masterItemCategoryId,
+                isActive: values.isActive,
+            };
+
+            try {
+                // Update item
+                await new Promise((resolve, reject) => {
+                    updateItem({ id: editingItem.id, data: itemData }, {
+                        onSuccess: resolve,
+                        onError: reject
+                    });
+                });
+
+                // Handle variants
+                const promises: Promise<unknown>[] = [];
+
+                // Delete marked variants
+                variantsToDelete.forEach(variantId => {
+                    promises.push(new Promise((resolve, reject) => {
+                        deleteVariant({ itemId: editingItem.id, variantId }, {
+                            onSuccess: resolve,
+                            onError: reject
+                        });
+                    }));
+                });
+
+                // Process each variant
+                values.masterItemVariants.forEach(variant => {
+                    const processedVariant = { ...variant, isBaseUnit: variant.amount === 1 };
+
+                    if (!variant.id) {
+                        // New variant
+                        promises.push(new Promise((resolve, reject) => {
+                            addVariant({ itemId: editingItem.id, data: processedVariant as any }, {
+                                onSuccess: resolve,
+                                onError: reject
+                            });
+                        }));
+                    } else {
+                        // Check if modified
+                        const original = originalVariants.find(v => v.id === variant.id);
+                        const hasChanged = !original ||
+                            original.unit !== variant.unit ||
+                            original.amount !== variant.amount ||
+                            original.sellPrice !== variant.sellPrice;
+
+                        if (hasChanged) {
+                            promises.push(new Promise((resolve, reject) => {
+                                updateVariant({
+                                    itemId: editingItem.id,
+                                    variantId: variant.id!,
+                                    data: processedVariant
+                                }, {
+                                    onSuccess: resolve,
+                                    onError: reject
+                                });
+                            }));
+                        }
+                    }
+                });
+
+                await Promise.all(promises);
+                setIsFormOpen(false);
+                toast.success("Item berhasil diperbarui");
+            } catch (err) {
+                toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal memperbarui item");
             }
-        });
+        }
     };
 
-    // Update Item Info
-    const onUpdateItemSubmit = (values: UpdateItemFormValues) => {
-        if (!editingItem) return;
-        updateItem({ id: editingItem.id, data: values }, {
-            onSuccess: () => {
-                toast.success("Info item berhasil diperbarui");
-                setEditingItem(prev => prev ? { ...prev, ...values } : null); // Optimistic update
-            },
-            onError: (err) => {
-                toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item");
-            }
-        });
-    };
-
-    // Variant Actions inside Edit Dialog
-    const openAddVariant = () => {
-        setEditingVariant(null);
-        variantForm.reset({
+    // Add variant to form
+    const handleVariantAdd = () => {
+        append({
             unit: "",
             amount: 1,
             sellPrice: 0,
-            isBaseUnit: false,
+            isBaseUnit: false
         });
-        setVariantDialogOpen(true);
     };
 
-    const openEditVariant = (variant: ItemVariant) => {
-        setEditingVariant(variant);
-        variantForm.reset({
-            unit: variant.unit,
-            amount: variant.amount,
-            sellPrice: variant.sellPrice,
-            isBaseUnit: variant.isBaseUnit,
-        });
-        setVariantDialogOpen(true);
-    };
-
-    const onVariantSubmit = (values: VariantFormValues) => {
-        if (!editingItem) return;
-
-        const amount = Number(values.amount);
-        const isBaseUnit = amount === 1;
-
-        // Validation for Add: Check if Base Unit already exists in existing variants
-        if (!editingVariant && isBaseUnit) {
-            const hasBaseUnit = editingItem.masterItemVariants.some(v => v.amount === 1);
-            if (hasBaseUnit) {
-                variantForm.setError("amount", {
-                    type: "manual",
-                    message: "Variant dengan konversi 1 (Base Unit) sudah ada."
-                });
-                return;
-            }
+    // Delete variant from form
+    const handleVariantDelete = (index: number) => {
+        const variant = variantFields[index];
+        if (variant.id) {
+            // Existing variant - mark for deletion
+            setVariantsToDelete(prev => [...prev, variant.id]);
         }
-
-        // Validation for Edit: If changing TO amount 1, check if OTHER base unit exists
-        if (editingVariant && isBaseUnit) {
-            const anotherBaseUnit = editingItem.masterItemVariants.find(v => v.amount === 1 && v.id !== editingVariant.id);
-            if (anotherBaseUnit) {
-                variantForm.setError("amount", {
-                    type: "manual",
-                    message: "Variant lain dengan konversi 1 sudah ada."
-                });
-                return;
-            }
-        }
-
-        const payload = { ...values, isBaseUnit };
-
-        if (editingVariant) {
-            // Update
-            updateVariant({
-                itemId: editingItem.id,
-                variantId: editingVariant.id!,
-                data: payload
-            }, {
-                onSuccess: () => {
-                    setVariantDialogOpen(false);
-                    toast.success("Variant berhasil diperbarui");
-                },
-                onError: (err) =>
-                    toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
-            });
-        } else {
-            // Add
-            addVariant({ itemId: editingItem.id, data: payload as any }, {
-                onSuccess: () => {
-                    setVariantDialogOpen(false);
-                    toast.success("Variant berhasil ditambahkan");
-                },
-                onError: (err) =>
-                    toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
-            });
-        }
-    };
-
-    const handleEditClick = (item: Item) => {
-        setEditingItem(item);
-        editItemForm.reset({
-            name: item.name,
-            masterSupplierId: item.masterSupplierId,
-            masterItemCategoryId: item.masterItemCategoryId,
-            isActive: item.isActive,
-        });
-        setIsEditOpen(true);
+        // Remove from form
+        remove(index);
     };
 
     const handleDeleteItem = () => {
@@ -376,18 +390,7 @@ export default function ItemsPage() {
                 setDeletingItem(null);
                 toast.success("Item berhasil dihapus");
             },
-            onError: (err) => toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
-        });
-    };
-
-    const handleDeleteVariant = () => {
-        if (!deletingVariant) return;
-        deleteVariant({ itemId: deletingVariant.itemId, variantId: deletingVariant.variant.id }, {
-            onSuccess: () => {
-                setDeletingVariant(null);
-                toast.success("Variant berhasil dihapus");
-            },
-            onError: (err) => toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
+            onError: (err) => toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal menghapus item")
         });
     };
 
@@ -395,7 +398,7 @@ export default function ItemsPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Manajemen Item</h2>
-                <Button onClick={() => { setIsCreateOpen(true); createForm.reset(); }}>
+                <Button onClick={handleOpenCreate}>
                     <Plus className="mr-2 h-4 w-4" /> Tambah Item
                 </Button>
             </div>
@@ -528,7 +531,7 @@ export default function ItemsPage() {
                                         {index === 0 && (
                                             <TableCell rowSpan={rowSpan} className="align-top text-right border-l">
                                                 <div className="flex flex-col gap-1 items-end">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleEditClick(item)}>
+                                                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(item)}>
                                                         <Pencil className="h-4 w-4 mr-1" /> Edit
                                                     </Button>
                                                     <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setDeletingItem(item)}>
@@ -588,289 +591,184 @@ export default function ItemsPage() {
                 </div>
             </div>
 
-            {/* --- CREATE Dialog --- */}
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* --- UNIFIED DIALOG (Create & Edit) --- */}
+            <Dialog open={isFormOpen} onOpenChange={(open) => {
+                if (!open) {
+                    setIsFormOpen(false);
+                    setVariantsToDelete([]);
+                    setOriginalVariants([]);
+                }
+            }}>
+                <DialogContent className="!max-w-6xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Tambah Item Baru</DialogTitle>
-                        <DialogDescription>Masukan detail item dan variant awal.</DialogDescription>
+                        <DialogTitle>{formMode === 'create' ? 'Tambah' : 'Edit'} Item</DialogTitle>
+                        <DialogDescription>
+                            {formMode === 'create'
+                                ? 'Masukan detail item dan variant awal.'
+                                : `Perbarui informasi item: ${editingItem?.name}`}
+                        </DialogDescription>
                     </DialogHeader>
-                    <Form {...createForm}>
-                        <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6">
-                            {/* Section 1: Item Info */}
-                            <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                                <FormField control={createForm.control} name="name" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Nama Item</FormLabel>
-                                        <FormControl><Input placeholder="Contoh: Indomie Goreng" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={createForm.control} name="code" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Kode Item</FormLabel>
-                                        <FormControl><Input placeholder="Contoh: IND001" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={createForm.control} name="masterItemCategoryId" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Kategori</FormLabel>
-                                        <FormControl>
-                                            <Combobox
-                                                value={field.value}
-                                                onChange={field.onChange}
-                                                options={categories?.data || []}
-                                                placeholder="Pilih Kategori"
-                                                searchPlaceholder="Cari kategori..."
-                                                renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={createForm.control} name="masterSupplierId" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Supplier</FormLabel>
-                                        <FormControl>
-                                            <Combobox
-                                                value={field.value}
-                                                onChange={field.onChange}
-                                                options={suppliers?.data || []}
-                                                placeholder="Pilih Supplier"
-                                                searchPlaceholder="Cari supplier..."
-                                                renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
-
-                            {/* Section 2: Variants */}
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <h3 className="text-lg font-medium">Variants</h3>
-                                    <Button type="button" variant="outline" size="sm" onClick={() => append({ unit: "", amount: 1, sellPrice: 0, isBaseUnit: false })}>
-                                        <CirclePlus className="mr-2 h-4 w-4" /> Tambah Variant
-                                    </Button>
-                                </div>
+                    <Form {...unifiedForm}>
+                        <form onSubmit={unifiedForm.handleSubmit(onUnifiedSubmit)} className="space-y-6">
+                            {/* 2-Column Layout */}
+                            <div className="grid grid-cols-2 gap-6">
+                                {/* LEFT COLUMN: Item Info */}
                                 <div className="space-y-4">
-                                    {variantFields.map((field, index) => (
-                                        <div key={field.id} className="flex gap-4 items-end border p-4 rounded-md bg-muted/20 relative">
-                                            {index > 0 && (
-                                                <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-red-500" onClick={() => remove(index)}>
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                            <div className="grid grid-cols-3 gap-4 w-full">
-                                                <FormField control={createForm.control} name={`masterItemVariants.${index}.unit`} render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-xs">Satuan</FormLabel>
-                                                        <Select onValueChange={field.onChange} value={field.value}>
-                                                            <FormControl><SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger></FormControl>
-                                                            <SelectContent>
-                                                                {units?.data?.map(u => (
-                                                                    <SelectItem key={u.id} value={u.unit}>{u.unit}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} />
-                                                <FormField control={createForm.control} name={`masterItemVariants.${index}.amount`} render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-xs">Konversi</FormLabel>
-                                                        <FormControl><Input type="number" {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} />
-                                                <FormField control={createForm.control} name={`masterItemVariants.${index}.sellPrice`} render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-xs">Harga Jual</FormLabel>
-                                                        <FormControl><Input type="number" {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} />
-                                                {/* Hidden base unit, managed by logic */}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {createForm.formState.errors.masterItemVariants?.root && (
-                                        <p className="text-sm text-red-500">{createForm.formState.errors.masterItemVariants.root.message}</p>
-                                    )}
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit" disabled={isCreating}>{isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Simpan Item</Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
+                                    <h3 className="text-sm font-medium border-b pb-2">Informasi Item</h3>
 
-            {/* --- EDIT Dialog --- */}
-            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Item: {editingItem?.name}</DialogTitle>
-                    </DialogHeader>
-                    <Tabs defaultValue="info">
-                        <TabsList>
-                            <TabsTrigger value="info">Informasi Dasar</TabsTrigger>
-                            <TabsTrigger value="variants">Variants</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="info" className="space-y-4 pt-4">
-                            <Form {...editItemForm}>
-                                <form onSubmit={editItemForm.handleSubmit(onUpdateItemSubmit)} className="space-y-4">
-                                    <FormField control={editItemForm.control} name="name" render={({ field }) => (
+                                    <FormField control={unifiedForm.control} name="name" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Nama Item</FormLabel>
-                                            <FormControl><Input {...field} /></FormControl>
+                                            <FormControl><Input placeholder="Contoh: Indomie Goreng" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField control={editItemForm.control} name="masterItemCategoryId" render={({ field }) => (
+
+                                    {formMode === 'create' && (
+                                        <FormField control={unifiedForm.control} name="code" render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Kategori</FormLabel>
-                                                <FormControl>
-                                                    <Combobox
-                                                        value={field.value}
-                                                        onChange={field.onChange}
-                                                        options={categories?.data || []}
-                                                        placeholder="Pilih Kategori"
-                                                        renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
-                                                    />
-                                                </FormControl>
+                                                <FormLabel>Kode Item</FormLabel>
+                                                <FormControl><Input placeholder="Contoh: IND001" {...field} /></FormControl>
+                                                <FormMessage />
                                             </FormItem>
                                         )} />
-                                        <FormField control={editItemForm.control} name="masterSupplierId" render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Supplier</FormLabel>
-                                                <FormControl>
-                                                    <Combobox
-                                                        value={field.value}
-                                                        onChange={field.onChange}
-                                                        options={suppliers?.data || []}
-                                                        placeholder="Pilih Supplier"
-                                                        renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
-                                                    />
-                                                </FormControl>
-                                            </FormItem>
-                                        )} />
-                                    </div>
-                                    <FormField control={editItemForm.control} name="isActive" render={({ field }) => (
-                                        <FormItem className="flex items-center gap-2 space-y-0">
-                                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                                            <FormLabel>Status Aktif</FormLabel>
+                                    )}
+
+                                    <FormField control={unifiedForm.control} name="masterItemCategoryId" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Kategori</FormLabel>
+                                            <FormControl>
+                                                <Combobox
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    options={categories?.data || []}
+                                                    placeholder="Pilih Kategori"
+                                                    searchPlaceholder="Cari kategori..."
+                                                    renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
                                         </FormItem>
                                     )} />
-                                    <div className="flex justify-end">
-                                        <Button type="submit" disabled={isUpdating}>{isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Update Info</Button>
-                                    </div>
-                                </form>
-                            </Form>
-                        </TabsContent>
-                        <TabsContent value="variants" className="pt-4">
-                            <div className="flex justify-end mb-4">
-                                <Button size="sm" onClick={openAddVariant}><Plus className="mr-2 h-4 w-4" /> Tambah Variant</Button>
-                            </div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Kode</TableHead>
-                                        <TableHead>Unit</TableHead>
-                                        <TableHead>Konversi</TableHead>
-                                        <TableHead>Harga</TableHead>
-                                        <TableHead className="text-right">Aksi</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {editingItem?.masterItemVariants?.map(v => (
-                                        <TableRow key={v.id}>
-                                            <TableCell>{v.unit}</TableCell>
-                                            <TableCell>{v.amount}</TableCell>
-                                            <TableCell>{v.sellPrice}</TableCell>
-                                            <TableCell className="text-right flex justify-end gap-2">
-                                                <Button variant="ghost" size="icon" onClick={() => openEditVariant(v)}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => setDeletingVariant({ itemId: editingItem.id, variant: v })}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TabsContent>
-                    </Tabs>
-                </DialogContent>
-            </Dialog>
 
-            {/* --- VARIANT Dialog (Add/Edit) --- */}
-            <Dialog open={variantDialogOpen} onOpenChange={setVariantDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{editingVariant ? "Edit Variant" : "Tambah Variant"}</DialogTitle>
-                    </DialogHeader>
-                    <Form {...variantForm}>
-                        <form onSubmit={variantForm.handleSubmit(onVariantSubmit)} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={variantForm.control} name="unit" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Satuan</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {units?.data?.map(u => <SelectItem key={u.id} value={u.unit}>{u.unit}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={variantForm.control} name="amount" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Konversi</FormLabel>
-                                        <FormControl><Input type="number" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                                    <FormField control={unifiedForm.control} name="masterSupplierId" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Supplier</FormLabel>
+                                            <FormControl>
+                                                <Combobox
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    options={suppliers?.data || []}
+                                                    placeholder="Pilih Supplier"
+                                                    searchPlaceholder="Cari supplier..."
+                                                    renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+
+                                    {formMode === 'edit' && (
+                                        <FormField control={unifiedForm.control} name="isActive" render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel>Status Aktif</FormLabel>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                            </FormItem>
+                                        )} />
+                                    )}
+                                </div>
+
+                                {/* RIGHT COLUMN: Variants */}
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center border-b pb-2">
+                                        <h3 className="text-sm font-medium">Variants ({variantFields.length})</h3>
+                                        {/* <Button type="button" variant="ghost" size="sm" onClick={handleVariantAdd}>
+                                            <CirclePlus className="mr-1 h-4 w-4" /> Tambah
+                                        </Button> */}
+                                    </div>
+
+                                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                                        {variantFields.map((field, index) => (
+                                            <div key={field.id} className="relative border p-3 rounded-md bg-muted/20">
+                                                {variantFields.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="absolute top-1 right-1 h-6 w-6 text-red-500 hover:bg-red-50"
+                                                        onClick={() => handleVariantDelete(index)}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-row gap-2">
+                                                        <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.unit`} render={({ field }) => (
+                                                            <FormItem className="w-full">
+                                                                <FormLabel className="text-xs">Satuan</FormLabel>
+                                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                                    <FormControl><SelectTrigger className="w-full">
+                                                                        <SelectValue placeholder="Pilih" />
+                                                                    </SelectTrigger></FormControl>
+                                                                    <SelectContent>
+                                                                        {units?.data?.map(u => (
+                                                                            <SelectItem key={u.id} value={u.unit}>{u.unit}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} />
+                                                        <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.amount`} render={({ field }) => (
+                                                            <FormItem className="w-full">
+                                                                <FormLabel className="text-xs">Konversi</FormLabel>
+                                                                <FormControl><Input type="number" {...field} className="w-full" /></FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} />
+                                                    </div>
+                                                    <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.sellPrice`} render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs">Harga Jual</FormLabel>
+                                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <Button type="button" variant="ghost" size="sm" onClick={handleVariantAdd}>
+                                            <CirclePlus className="mr-1 h-4 w-4" /> Tambah
+                                        </Button>
+                                    </div>
+                                    {unifiedForm.formState.errors.masterItemVariants?.root && (
+                                        <p className="text-sm text-red-500">{unifiedForm.formState.errors.masterItemVariants.root.message}</p>
+                                    )}
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={variantForm.control} name="sellPrice" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Harga Jual</FormLabel>
-                                        <FormControl><Input type="number" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+
                             <DialogFooter>
-                                <Button type="submit" disabled={isAddingVariant || isUpdatingVariant}>Simpan</Button>
+                                <Button type="submit" disabled={isCreating || isUpdating}>
+                                    {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {formMode === 'create' ? 'Simpan Item' : 'Perbarui Item'}
+                                </Button>
                             </DialogFooter>
                         </form>
                     </Form>
                 </DialogContent>
             </Dialog>
 
-            {/* --- DELETE ITEM & VARIANT ALERTS --- */}
+            {/* --- DELETE ITEM ALERT --- */}
             <AlertDialog open={!!deletingItem} onOpenChange={(o) => !o && setDeletingItem(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader><DialogTitle>Hapus Item?</DialogTitle></AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteItem} className="bg-red-600">Hapus</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-            <AlertDialog open={!!deletingVariant} onOpenChange={(o) => !o && setDeletingVariant(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader><DialogTitle>Hapus Variant {deletingVariant?.variant.unit}?</DialogTitle></AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteVariant} className="bg-red-600">Hapus</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

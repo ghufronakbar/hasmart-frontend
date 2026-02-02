@@ -498,6 +498,14 @@ export default function PurchasePage() {
             cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
         },
         {
+            accessorKey: "notes",
+            header: () => (
+                <div className="text-left">Catatan</div>
+            ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            cell: ({ row }: any) => <div className="text-left max-w-[200px] truncate">{row.original.notes || "-"}</div>,
+        },
+        {
             id: "actions",
             header: () => <div className="text-right">Aksi</div>,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
