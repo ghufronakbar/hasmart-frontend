@@ -413,11 +413,11 @@ export default function TransferPage() {
                             className="pl-8"
                         />
                     </div>
-                    <DatePickerWithRange
-                        date={dateRange}
-                        setDate={setDateRange}
-                    />
                 </div>
+                <DatePickerWithRange
+                    date={dateRange}
+                    setDate={setDateRange}
+                />
             </div>
 
             <DataTable

@@ -334,15 +334,18 @@ export default function AdjustStockPage() {
             )
         },
         {
-            accessorKey: "gapAmount",
+            id: "gap",
             header: ({ column }) => (
                 <DataTableColumnHeader column={column} title="Selisih" className="text-right" />
             ),
-            cell: ({ row }) => (
-                <div className={cn("text-right font-mono font-bold", row.original.gapAmount > 0 ? "text-green-600" : "text-red-600")}>
-                    {row.original.gapAmount > 0 ? "+" : ""}{row.original.gapAmount} {row.original.masterItemVariant?.unit}
-                </div>
-            )
+            cell: ({ row }) => {
+                const gap = row.original.totalGapAmount
+                return (
+                    <div className={cn("text-right font-mono font-bold", gap > 0 ? "text-green-600" : gap < 0 ? "text-red-600" : "text-muted-foreground")}>
+                        {gap > 0 ? "+" : ""}{gap}
+                    </div>
+                );
+            }
         },
         {
             accessorKey: "finalAmount",
@@ -351,7 +354,7 @@ export default function AdjustStockPage() {
             ),
             cell: ({ row }) => (
                 <div className={cn("text-right font-mono font-bold")}>
-                    {row.original.finalAmount}
+                    {row.original.finalAmount} {row.original.masterItemVariant?.unit} ({row.original.finalTotalAmount})
                 </div>
             )
         },
@@ -451,7 +454,7 @@ export default function AdjustStockPage() {
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
                                     <span className="font-semibold block">Tanggal</span>
-                                    <span>{detailData.data?.createdAt ? format(new Date(detailData.data.createdAt), "dd MMMM yyyy HH:mm", { locale: idLocale }) : "-"}</span>
+                                    <span>{detailData.data?.transactionDate ? format(new Date(detailData.data.transactionDate), "dd MMMM yyyy HH:mm", { locale: idLocale }) : "-"}</span>
                                 </div>
                                 <div>
                                     <span className="font-semibold block">Barang</span>
@@ -462,10 +465,23 @@ export default function AdjustStockPage() {
                                     <span>{detailData.data?.masterItemVariant?.code} ({detailData.data?.masterItemVariant?.unit})</span>
                                 </div>
                                 <div>
+                                    <span className="font-semibold block">Stok Awal</span>
+                                    <span>{detailData.data?.beforeAmount}</span>
+                                </div>
+                                <div>
+                                    <span className="font-semibold block">Stok Fisik (Akhir)</span>
+                                    <span>{detailData.data?.finalAmount} {detailData.data?.masterItemVariant?.unit} ({detailData.data?.finalTotalAmount})</span>
+                                </div>
+                                <div>
                                     <span className="font-semibold block">Selisih</span>
-                                    <span className={cn("font-bold", (detailData.data?.gapAmount || 0) > 0 ? "text-green-600" : "text-red-600")}>
-                                        {(detailData.data?.gapAmount || 0) > 0 ? "+" : ""}{detailData.data?.gapAmount} {detailData.data?.masterItemVariant?.unit}
-                                    </span>
+                                    {(() => {
+                                        const gap = (detailData.data?.totalGapAmount || 0);
+                                        return (
+                                            <span className={cn("font-bold", gap > 0 ? "text-green-600" : gap < 0 ? "text-red-600" : "text-muted-foreground")}>
+                                                {gap > 0 ? "+" : ""}{gap}
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
                                 <div className="col-span-2">
                                     <span className="font-semibold block">Catatan</span>
@@ -584,7 +600,7 @@ export default function AdjustStockPage() {
                                                     <div className="col-span-3">
                                                         <FormField control={form.control} name={`items.${index}.actualQty`} render={({ field }) => (
                                                             <FormItem>
-                                                                <FormLabel className="text-xs font-bold text-primary">Fisik (Qty)</FormLabel>
+                                                                <FormLabel className="text-xs font-bold text-primary">Total Fisik</FormLabel>
                                                                 <FormControl>
                                                                     <Input type="number" min="0" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
                                                                 </FormControl>

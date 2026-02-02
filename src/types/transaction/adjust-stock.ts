@@ -27,8 +27,11 @@ export interface TransactionAdjustment {
   notes?: string;
   masterItemId: number;
   masterItemVariantId: number;
-  gapAmount: number;
+  inputAmount: number;
+  beforeAmount: number;
+  beforeTotalAmount: number;
   finalAmount: number;
+  finalTotalAmount: number;
   recordedGapConversion: number;
   totalGapAmount: number;
   branchId: number;
