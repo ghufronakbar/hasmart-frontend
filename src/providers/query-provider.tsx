@@ -5,10 +5,7 @@
  * Wraps the app with TanStack Query client
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AxiosError } from 'axios';
 import { useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
-
 interface QueryProviderProps {
     children: ReactNode;
 }
@@ -29,7 +26,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
                     mutations: {
                         // Retry failed mutations 0 times
                         retry: 0,
-                        onError: (error) => {
+                        onError: () => {
                             // if (error instanceof AxiosError) {
                             //     toast(typeof error.response?.data?.errors?.message === "string" ? error.response?.data?.errors?.message : "Terjadi kesalahan");
                             // }

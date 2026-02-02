@@ -10,15 +10,11 @@ import { DateRange } from "react-day-picker";
 import {
     Loader2,
     Plus,
-    Calendar as CalendarIcon,
     Search,
     Trash2,
     CirclePlus,
     X,
-    ChevronsUpDown,
-    Check,
     Pencil,
-    UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -27,19 +23,12 @@ import {
     SortingState,
     VisibilityState,
     getCoreRowModel,
-    flexRender,
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+
 import {
     Dialog,
     DialogContent,
@@ -66,14 +55,7 @@ import {
     DataTable,
 } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -94,13 +76,13 @@ import {
     useUpdateSalesReturn,
     useDeleteSalesReturn,
 } from "@/hooks/transaction/use-sales-return";
-import { useSalesList, useSalesByInvoice } from "@/hooks/transaction/use-sales";
+import { useSalesByInvoice } from "@/hooks/transaction/use-sales";
 import { useItems } from "@/hooks/master/use-item";
 import { useBranch } from "@/providers/branch-provider";
 import { useDebounce } from "@/hooks/use-debounce";
 
 import { SalesReturn, CreateSalesReturnDTO } from "@/types/transaction/sales-return";
-import { Sales } from "@/types/transaction/sales";
+
 import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
@@ -196,8 +178,7 @@ export default function SalesReturnPage() {
     const { mutate: updateSalesReturn, isPending: isUpdating } = useUpdateSalesReturn();
     const { mutate: deleteSalesReturn, isPending: isDeleting } = useDeleteSalesReturn();
 
-    const [invoiceSearch, setInvoiceSearch] = useState("");
-    const debouncedInvoiceSearch = useDebounce(invoiceSearch, 500);
+
     // const { data: salesData } = useSalesList({ search: debouncedInvoiceSearch, limit: 20 });
 
     // Invoice Check Logic
@@ -206,7 +187,7 @@ export default function SalesReturnPage() {
     const [submittedInvoiceQuery, setSubmittedInvoiceQuery] = useState(""); // New state for submission
 
     // Pass empty string if editing or if we don't want to search
-    const { data: salesInvoiceData, isError: isInvoiceError, error: invoiceCheckError, isLoading: isCheckingInvoice } = useSalesByInvoice(
+    const { data: salesInvoiceData, error: invoiceCheckError, isLoading: isCheckingInvoice } = useSalesByInvoice(
         !editingId ? submittedInvoiceQuery : ""
     );
 
@@ -282,8 +263,7 @@ export default function SalesReturnPage() {
         });
     };
 
-    // Derived selected invoice data
-    const [selectedInvoice, setSelectedInvoice] = useState<Partial<Sales> | null>(null);
+
 
     // --- Create Form ---
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -293,7 +273,6 @@ export default function SalesReturnPage() {
         setIsCreateOpen(open);
         if (!open) {
             setEditingId(null);
-            setSelectedInvoice(null);
             setIsInvoiceVerified(false);
             setSearchInvoiceQuery("");
             setSearchItem("");
@@ -487,11 +466,7 @@ export default function SalesReturnPage() {
             const salesReturn = salesReturnDetail.data;
             const currentItems = salesReturn.transactionSalesReturnItems || [];
 
-            // Set selected invoice info
-            setSelectedInvoice({
-                invoiceNumber: salesReturn.transactionSales?.invoiceNumber,
-                transactionDate: "...",
-            });
+
 
             const formDataVal = {
                 transactionDate: new Date(salesReturn.createdAt),
@@ -553,9 +528,11 @@ export default function SalesReturnPage() {
     const columns = useMemo(() => [
         {
             accessorKey: "transactionDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const date = new Date(row.original.transactionDate);
                 return !isNaN(date.getTime()) ? format(date, "dd MMM yyyy", { locale: idLocale }) : "-";
@@ -563,28 +540,35 @@ export default function SalesReturnPage() {
         },
         {
             accessorKey: "returnNumber",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="No. Retur" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <span className="font-medium">{row.original.returnNumber}</span>,
         },
         {
             accessorKey: "transactionSales.invoiceNumber",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Invoice Asli" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <span className="text-muted-foreground">{row.original.transactionSales?.invoiceNumber}</span>,
         },
         {
             accessorKey: "recordedTotalAmount",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
         },
         {
             id: "actions",
             header: () => <div className="text-right">Aksi</div>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const s = row.original;
                 return (

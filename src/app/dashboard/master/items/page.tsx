@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,8 +15,7 @@ import {
     ChevronRight,
     CirclePlus,
     X,
-    Check,
-    ChevronsUpDown,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { PaginationState } from "@tanstack/react-table";
@@ -38,7 +37,7 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-    FormDescription,
+
 } from "@/components/ui/form";
 import {
     Select,
@@ -47,28 +46,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+
 import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
-    AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -96,8 +81,9 @@ import { useSuppliers } from "@/hooks/master/use-supplier";
 import { useItemCategories } from "@/hooks/master/use-item-category";
 import { useUnits } from "@/hooks/master/use-unit";
 import { useDebounce } from "@/hooks/use-debounce";
-import { cn } from "@/lib/utils";
+
 import { Combobox } from "@/components/custom/combobox";
+import { AxiosError } from "axios";
 
 // --- Validation Schemas ---
 
@@ -121,7 +107,7 @@ const createItemSchema = z.object({
             const baseUnits = variants.filter(v => v.amount === 1);
             return baseUnits.length <= 1;
         }, "Hanya boleh ada satu variant dengan konversi 1 (Base Unit).")
-        .refine((variants) => {
+        .refine(() => {
             // In Create wizard, we just ensure duplicates of amount=1 are caught.
             // We can optionally enforce AT LEAST ONE base unit if required, but backend only says min 1 variant.
             // Usually Base Unit is required. Let's enforce it?
@@ -165,10 +151,10 @@ export default function ItemsPage() {
 
     const { mutate: createItem, isPending: isCreating } = useCreateItem();
     const { mutate: updateItem, isPending: isUpdating } = useUpdateItem();
-    const { mutate: deleteItem, isPending: isDeleting } = useDeleteItem();
+    const { mutate: deleteItem } = useDeleteItem();
     const { mutate: addVariant, isPending: isAddingVariant } = useAddVariant();
     const { mutate: updateVariant, isPending: isUpdatingVariant } = useUpdateVariant();
-    const { mutate: deleteVariant, isPending: isDeletingVariant } = useDeleteVariant();
+    const { mutate: deleteVariant } = useDeleteVariant();
 
     // --- Dialog States ---
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -202,15 +188,11 @@ export default function ItemsPage() {
         name: "masterItemVariants",
     });
 
-    // Watch variants to process isBaseUnit automatically
-    const watchedVariants = useWatch({
-        control: createForm.control,
-        name: "masterItemVariants"
-    });
+
 
     // Effect to auto-set isBaseUnit based on amount = 1
     useEffect(() => {
-        const subscription = createForm.watch((value, { name, type }) => {
+        const subscription = createForm.watch((value, { name }) => {
             if (name?.includes('amount')) {
                 // If amount changes, we might need to update isBaseUnit for that specific field
                 // But useWatch is better for handling the whole array state.
@@ -228,6 +210,7 @@ export default function ItemsPage() {
             }
         });
         return () => subscription.unsubscribe();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [createForm.watch]);
 
     // 2. Edit Item Form (Info Only)
@@ -272,8 +255,8 @@ export default function ItemsPage() {
                 createForm.reset();
                 toast.success("Item berhasil dibuat");
             },
-            onError: (err: any) => {
-                toast.error(err?.response?.data?.errors?.message || "Gagal membuat item");
+            onError: (err) => {
+                toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item");
             }
         });
     };
@@ -286,8 +269,8 @@ export default function ItemsPage() {
                 toast.success("Info item berhasil diperbarui");
                 setEditingItem(prev => prev ? { ...prev, ...values } : null); // Optimistic update
             },
-            onError: (err: any) => {
-                toast.error(err?.response?.data?.errors?.message || "Gagal update item");
+            onError: (err) => {
+                toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item");
             }
         });
     };
@@ -360,7 +343,8 @@ export default function ItemsPage() {
                     setVariantDialogOpen(false);
                     toast.success("Variant berhasil diperbarui");
                 },
-                onError: (err: any) => toast.error(err?.response?.data?.errors?.message || "Gagal update variant")
+                onError: (err) =>
+                    toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
             });
         } else {
             // Add
@@ -369,7 +353,8 @@ export default function ItemsPage() {
                     setVariantDialogOpen(false);
                     toast.success("Variant berhasil ditambahkan");
                 },
-                onError: (err: any) => toast.error(err?.response?.data?.errors?.message || "Gagal tambah variant")
+                onError: (err) =>
+                    toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
             });
         }
     };
@@ -392,7 +377,7 @@ export default function ItemsPage() {
                 setDeletingItem(null);
                 toast.success("Item berhasil dihapus");
             },
-            onError: (err: any) => toast.error(err?.response?.data?.errors?.message || "Gagal hapus item")
+            onError: (err) => toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
         });
     };
 
@@ -403,7 +388,7 @@ export default function ItemsPage() {
                 setDeletingVariant(null);
                 toast.success("Variant berhasil dihapus");
             },
-            onError: (err: any) => toast.error(err?.response?.data?.errors?.message || "Gagal hapus variant")
+            onError: (err) => toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal membuat item")
         });
     };
 

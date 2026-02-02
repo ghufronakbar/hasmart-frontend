@@ -4,8 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray, useWatch, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
+
 import {
     Loader2,
     Search,
@@ -15,9 +14,6 @@ import {
     ShoppingCart,
     CreditCard,
     User,
-    Calculator,
-    Percent,
-    Tag,
     Minus
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,25 +29,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
 import {
     Select,
     SelectContent,
@@ -59,11 +38,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -81,7 +55,7 @@ import { useItems } from "@/hooks/master/use-item";
 import { memberService } from "@/services/master/member.service";
 import { useBranch } from "@/providers/branch-provider";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Item, ItemVariant } from "@/types/master/item";
+import { ItemVariant } from "@/types/master/item";
 import { Member } from "@/types/master/member";
 import { Combobox } from "@/components/custom/combobox";
 import { itemService } from "@/services";
@@ -184,7 +158,8 @@ export default function PointOfSalesPage() {
                 setMemberVerified(null);
                 toast.error("Member tidak ditemukan");
             }
-        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_) {
             setMemberVerified(null);
             toast.error("Gagal verifikasi member");
         } finally {

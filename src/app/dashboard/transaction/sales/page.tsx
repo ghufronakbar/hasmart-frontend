@@ -10,13 +10,11 @@ import { DateRange } from "react-day-picker";
 import {
     Loader2,
     Plus,
-    Calendar as CalendarIcon,
     Search,
     Trash2,
     CirclePlus,
     X,
     Pencil,
-    UserCheck,
     Check,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,7 +27,7 @@ import {
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
 
-import { cn } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,7 +76,7 @@ import { Item, ItemVariant } from "@/types/master/item";
 import { Member } from "@/types/master/member";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
 
 // --- Types & Schemas ---
@@ -224,7 +222,7 @@ export default function SalesPage() {
                 setMemberVerified(null);
                 toast.error("Member tidak ditemukan");
             }
-        } catch (error) {
+        } catch {
             setMemberVerified(null);
             toast.error("Gagal memverifikasi member");
         } finally {
@@ -418,9 +416,11 @@ export default function SalesPage() {
     const columns = useMemo(() => [
         {
             accessorKey: "transactionDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const date = new Date(row.original.transactionDate);
                 return !isNaN(date.getTime()) ? format(date, "dd MMM yyyy", { locale: idLocale }) : "-";
@@ -428,28 +428,35 @@ export default function SalesPage() {
         },
         {
             accessorKey: "invoiceNumber",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="No. Invoice" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <span className="font-medium">{row.original.invoiceNumber}</span>,
         },
         {
             accessorKey: "masterMember.name",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Member" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <span className="text-muted-foreground">{row.original.masterMember?.name || "-"}</span>,
         },
         {
             accessorKey: "recordedTotalAmount",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
         },
         {
             id: "actions",
             header: () => <div className="text-right">Aksi</div>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const s = row.original;
                 return (

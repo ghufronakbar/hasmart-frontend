@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,20 +9,15 @@ import { id as idLocale } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import {
     Loader2,
-    Plus,
     Calendar as CalendarIcon,
     Search,
     Trash2,
     CirclePlus,
     X,
     Eye,
-    ChevronsUpDown,
-    Check,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
     ColumnDef,
-    flexRender,
     getCoreRowModel,
     useReactTable,
     SortingState,
@@ -39,6 +34,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+
 import {
     Dialog,
     DialogContent,
@@ -62,14 +58,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -81,14 +70,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
+
 
 
 import {
@@ -104,7 +86,7 @@ import { TransactionAdjustment } from "@/types/transaction/adjust-stock";
 import { Item, ItemVariant } from "@/types/master/item";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
-import { DataTableToolbar } from "@/components/ui/data-table/data-table-toolbar";
+
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
@@ -267,17 +249,20 @@ export default function AdjustStockPage() {
     };
 
     // Update cache when detail loads
-    useMemo(() => {
+    // Update cache when detail loads
+    useEffect(() => {
         if (detailData?.data?.items) {
-            const newCache = { ...selectedItemsCache };
-            let hasChange = false;
-            detailData.data.items.forEach(item => {
-                if (item.masterItem && !newCache[item.masterItem.id]) {
-                    newCache[item.masterItem.id] = item.masterItem;
-                    hasChange = true;
-                }
+            setSelectedItemsCache(prev => {
+                const newCache = { ...prev };
+                let hasChange = false;
+                detailData?.data?.items?.forEach(item => {
+                    if (item.masterItem && !newCache[item.masterItem.id]) {
+                        newCache[item.masterItem.id] = item.masterItem;
+                        hasChange = true;
+                    }
+                });
+                return hasChange ? newCache : prev;
             });
-            if (hasChange) setSelectedItemsCache(newCache);
         }
     }, [detailData]);
 
@@ -314,20 +299,24 @@ export default function AdjustStockPage() {
     const columns: ColumnDef<TransactionAdjustment>[] = [
         {
             accessorKey: "transactionDate",
-            header: ({ column }) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
-            cell: ({ row }) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            cell: ({ row }: any) => {
                 const date = new Date(row.original.transactionDate);
                 return isNaN(date.getTime()) ? "-" : format(date, "dd MMM yyyy HH:mm", { locale: idLocale });
             },
         },
         {
             accessorKey: "masterItem.name",
-            header: ({ column }) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Barang" />
             ),
-            cell: ({ row }) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            cell: ({ row }: any) => (
                 <div className="flex flex-col">
                     <span className="font-medium">{row.original.masterItem?.name}</span>
                     <span className="text-xs text-muted-foreground">{row.original.masterItemVariant?.code}</span>
@@ -336,10 +325,12 @@ export default function AdjustStockPage() {
         },
         {
             id: "gap",
-            header: ({ column }) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Selisih" className="text-right" />
             ),
-            cell: ({ row }) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            cell: ({ row }: any) => {
                 const gap = row.original.totalGapAmount
                 return (
                     <div className={cn("text-right font-mono font-bold", gap > 0 ? "text-green-600" : gap < 0 ? "text-red-600" : "text-muted-foreground")}>
@@ -350,11 +341,13 @@ export default function AdjustStockPage() {
         },
         {
             accessorKey: "finalAmount",
-            header: ({ column }) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Total Penyesuaian" className="text-right" />
             ),
-            cell: ({ row }) => (
-                <div className={cn("text-right font-mono font-bold")}>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            cell: ({ row }: any) => (
+                <div className="text-right font-mono font-bold">
                     {row.original.finalAmount} {row.original.masterItemVariant?.unit} ({row.original.finalTotalAmount})
                 </div>
             )
@@ -362,11 +355,13 @@ export default function AdjustStockPage() {
         {
             accessorKey: "notes",
             header: "Catatan",
-            cell: ({ row }) => <span className="text-muted-foreground italic truncate max-w-[200px] block">{row.original.notes || "-"}</span>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            cell: ({ row }: any) => <span className="text-muted-foreground italic truncate max-w-[200px] block">{row.original.notes || "-"}</span>
         },
         {
             id: "actions",
-            cell: ({ row }) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            cell: ({ row }: any) => (
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" onClick={() => handleViewDetail(row.original.id)}>
                         <Eye className="h-4 w-4 text-blue-500" />

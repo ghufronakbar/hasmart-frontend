@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { useProfile, useUpdateProfile, useChangePassword } from "@/hooks/app/use-user";
 import { useEffect } from "react";
+import { AxiosError } from "axios";
 
 // --- Validation Schemas ---
 
@@ -80,8 +81,8 @@ export default function ProfilePage() {
             onSuccess: () => {
                 toast.success("Profil berhasil diperbarui");
             },
-            onError: (error: any) => {
-                const message = error?.response?.data?.errors?.message || "Gagal memperbarui profil";
+            onError: (error) => {
+                const message = (error instanceof AxiosError ? error?.response?.data?.errors?.message : "Gagal membuat item")
                 toast.error(message);
             },
         });
@@ -93,8 +94,8 @@ export default function ProfilePage() {
                 toast.success("Password berhasil diubah");
                 passwordForm.reset();
             },
-            onError: (error: any) => {
-                const message = error?.response?.data?.errors?.message || "Gagal mengubah password";
+            onError: (error) => {
+                const message = (error instanceof AxiosError ? error?.response?.data?.errors?.message : "Gagal membuat item")
                 toast.error(message);
             },
         });

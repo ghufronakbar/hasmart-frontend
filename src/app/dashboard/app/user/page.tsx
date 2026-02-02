@@ -164,6 +164,7 @@ export default function UsersPage() {
                 setIsCreateOpen(false);
                 toast.success("Pengguna berhasil dibuat");
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onError: (error: any) => {
                 const message = error?.response?.data?.errors?.message || "Gagal membuat pengguna";
                 toast.error(message);
@@ -181,6 +182,7 @@ export default function UsersPage() {
                     setIsResetPasswordOpen(false);
                     toast.success("Password berhasil direset");
                 },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onError: (error: any) => {
                     const message = error?.response?.data?.errors?.message || "Gagal mereset password";
                     toast.error(message);
@@ -196,6 +198,7 @@ export default function UsersPage() {
                     setDeletingUser(null);
                     toast.success("Pengguna berhasil dihapus");
                 },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onError: (error: any) => {
                     const message = error?.response?.data?.errors?.message || "Gagal menghapus pengguna";
                     toast.error(message);

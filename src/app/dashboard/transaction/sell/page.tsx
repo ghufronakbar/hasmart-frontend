@@ -10,16 +10,13 @@ import { DateRange } from "react-day-picker";
 import {
     Loader2,
     Plus,
-    Calendar as CalendarIcon,
+
     Search,
     Trash2,
     CirclePlus,
     X,
-    ChevronsUpDown,
-    Check,
     Pencil,
     UserCheck,
-    UserX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,19 +25,14 @@ import {
     SortingState,
     VisibilityState,
     getCoreRowModel,
-    flexRender,
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
 
-import { cn } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+
+
 import {
     Dialog,
     DialogContent,
@@ -68,12 +60,7 @@ import {
 } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
+    // Command components removed as they are unused directly (Combobox is used)
 } from "@/components/ui/command";
 import {
     AlertDialog,
@@ -238,7 +225,6 @@ export default function SellPage() {
 
     const watchedItems = useWatch({ control: form.control, name: "items" }) as SellItemFormValues[];
     const watchedTaxPercentage = useWatch({ control: form.control, name: "taxPercentage" });
-    const watchedMemberCode = useWatch({ control: form.control, name: "memberCode" });
 
     // Handle Member Verification
     const handleVerifyMember = async () => {
@@ -259,7 +245,7 @@ export default function SellPage() {
                 setMemberVerified(null);
                 toast.error("Member tidak ditemukan");
             }
-        } catch (error) {
+        } catch {
             setMemberVerified(null);
             toast.error("Member tidak ditemukan");
         } finally {
@@ -461,24 +447,30 @@ export default function SellPage() {
     const columns = useMemo(() => [
         {
             accessorKey: "transactionDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => format(new Date(row.original.transactionDate), "dd MMM yyyy", { locale: idLocale }),
         },
         {
             accessorKey: "invoiceNumber",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Invoice" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <span className="font-medium">{row.original.invoiceNumber}</span>,
         },
         {
             accessorKey: "masterMember.name",
             id: "masterMemberName",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Member" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => (
                 <div className="flex flex-col">
                     <span>{row.original.memberCode}</span>
@@ -488,21 +480,26 @@ export default function SellPage() {
         },
         {
             accessorKey: "dueDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Jatuh Tempo" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => row.original.dueDate ? format(new Date(row.original.dueDate), "dd/MM/yyyy") : "-",
         },
         {
             accessorKey: "recordedTotalAmount",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
         },
         {
             id: "actions",
             header: () => <div className="text-right">Aksi</div>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const s = row.original;
                 return (

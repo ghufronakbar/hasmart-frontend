@@ -10,16 +10,13 @@ import { DateRange } from "react-day-picker";
 import {
     Loader2,
     Plus,
-    Calendar as CalendarIcon,
+
     Search,
     Trash2,
     CirclePlus,
     X,
-    ChevronsUpDown,
-    Check,
     Pencil,
     UserCheck,
-    UserX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,7 +25,6 @@ import {
     SortingState,
     VisibilityState,
     getCoreRowModel,
-    flexRender,
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
 
@@ -182,6 +178,7 @@ export default function SellReturnPage() {
             // Mapping from Sell Items to Master Items is tricky if backend doesn't return full nested masterItem structure
             // Assuming sellInvoiceData items structure includes nested masterItem.
             // Based on service definition: transactionSellItems include masterItem.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             detailItems = sellInvoiceData.data.items.map((si: any) => si.masterItem).filter((i: Item) => !!i);
         }
 
@@ -237,6 +234,7 @@ export default function SellReturnPage() {
             }
 
             // Populate items
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const mappedItems = (invoice.items || []).map((item: any) => ({
                 masterItemId: item.masterItemId,
                 masterItemVariantId: item.masterItemVariantId,
@@ -244,6 +242,7 @@ export default function SellReturnPage() {
                 // User said "mengisi form, pengguna wajib ... ambil data response masukkan sebagai default value"
                 // It's safer to pre-fill with bought quantity. User can decrease it.
                 sellPrice: item.sellPrice || 0,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 discounts: (item.discounts || []).map((d: any) => ({ percentage: d.percentage })),
             }));
 
@@ -325,7 +324,7 @@ export default function SellReturnPage() {
                 setMemberVerified(null);
                 toast.error("Member tidak ditemukan");
             }
-        } catch (error) {
+        } catch {
             setMemberVerified(null);
             toast.error("Member tidak ditemukan");
         } finally {
@@ -472,6 +471,7 @@ export default function SellReturnPage() {
                     masterItemVariantId: item.masterItemVariantId,
                     qty: item.qty,
                     sellPrice: item.sellPrice || 0,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     discounts: item.discounts?.map((d: any) => ({ percentage: d.percentage })) || []
                 }))
             };
@@ -528,24 +528,30 @@ export default function SellReturnPage() {
     const columns = useMemo(() => [
         {
             accessorKey: "transactionDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => format(new Date(row.original.transactionDate), "dd MMM yyyy", { locale: idLocale }),
         },
         {
             accessorKey: "invoiceNumber",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Invoice" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <span className="font-medium">{row.original.invoiceNumber}</span>,
         },
         {
             accessorKey: "masterMember.name",
             id: "masterMemberName",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Member" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => (
                 <div className="flex flex-col">
                     <span>{row.original.memberCode}</span>
@@ -555,21 +561,26 @@ export default function SellReturnPage() {
         },
         {
             accessorKey: "dueDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Jatuh Tempo" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => row.original.dueDate ? format(new Date(row.original.dueDate), "dd/MM/yyyy") : "-",
         },
         {
             accessorKey: "recordedTotalAmount",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
         },
         {
             id: "actions",
             header: () => <div className="text-right">Aksi</div>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const s = row.original;
                 return (

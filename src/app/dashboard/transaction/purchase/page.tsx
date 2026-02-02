@@ -13,13 +13,10 @@ import { DateRange } from "react-day-picker";
 import {
     Loader2,
     Plus,
-    Calendar as CalendarIcon,
     Search,
     Trash2,
     CirclePlus,
     X,
-    ChevronsUpDown,
-    Check,
     Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,20 +25,13 @@ import {
     SortingState,
     VisibilityState,
     getCoreRowModel,
-    flexRender,
     PaginationState,
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+
 import {
     Dialog,
     DialogContent,
@@ -69,12 +59,7 @@ import {
 } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
+    // Command components removed as they are unused directly (Combobox is used)
 } from "@/components/ui/command";
 import {
     AlertDialog,
@@ -468,43 +453,54 @@ export default function PurchasePage() {
     const columns = useMemo(() => [
         {
             accessorKey: "transactionDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Tanggal" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => format(new Date(row.original.transactionDate), "dd MMM yyyy", { locale: idLocale }),
         },
         {
             accessorKey: "invoiceNumber",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Invoice" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <span className="font-medium">{row.original.invoiceNumber}</span>,
         },
         {
             accessorKey: "masterSupplier.name",
             id: "masterSupplierName",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Supplier" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => row.original.masterSupplier?.name,
         },
         {
             accessorKey: "dueDate",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Jatuh Tempo" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => row.original.dueDate ? format(new Date(row.original.dueDate), "dd/MM/yyyy") : "-",
         },
         {
             accessorKey: "recordedTotalAmount",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             header: ({ column }: any) => (
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
         },
         {
             id: "actions",
             header: () => <div className="text-right">Aksi</div>,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const p = row.original;
                 return (

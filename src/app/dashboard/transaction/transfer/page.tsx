@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,15 +10,12 @@ import { id as idLocale } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import {
     Loader2,
-    Plus,
     Calendar as CalendarIcon,
     Search,
     Trash2,
     CirclePlus,
     X,
     Eye,
-    Check,
-    ChevronsUpDown,
 } from "lucide-react";
 import {
     PaginationState,
@@ -62,12 +59,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
+
 } from "@/components/ui/command";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
@@ -214,7 +206,8 @@ export default function TransferPage() {
     };
 
     // Update caches when detail loads
-    useMemo(() => {
+    // Update caches when detail loads
+    useEffect(() => {
         if (detailData?.data) {
             const d = detailData.data;
             // Cache to branch
@@ -234,7 +227,7 @@ export default function TransferPage() {
                 if (hasChange) setSelectedItemsCache(newCache);
             }
         }
-    }, [detailData]);
+    }, [detailData, selectedItemsCache]);
 
     const handleBranchSelect = (branchId: number) => {
         // Find the branch from the combined list of options for 'To Branch'
@@ -256,7 +249,6 @@ export default function TransferPage() {
 
     // Form
     const form = useForm<CreateTransferFormValues>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(createTransferSchema) as any,
         defaultValues: {
             transactionDate: new Date(),

@@ -40,6 +40,8 @@ export default function LoginPage() {
         },
     });
 
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
     async function onSubmit(data: FormValues) {
         setIsLoading(true);
         setError("");
@@ -48,6 +50,7 @@ export default function LoginPage() {
                 name: data.name,
                 password: data.password,
             });
+            await sleep(1000);
 
             if (response.data?.accessToken) {
                 localStorage.setItem("token", response.data.accessToken);

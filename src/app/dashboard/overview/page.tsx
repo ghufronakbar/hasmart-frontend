@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+
 import { useBranch } from "@/providers/branch-provider";
 import { Loader2, TrendingUp, TrendingDown, ShoppingCart, Package, AlertTriangle, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +61,6 @@ function formatCompact(value: number): string {
 }
 
 export default function OverviewPage() {
-    const router = useRouter();
     const { branch, isLoading: branchLoading } = useBranch();
 
     // Default to current month

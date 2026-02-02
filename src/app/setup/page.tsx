@@ -59,12 +59,16 @@ export default function SetupPage() {
         }
     }, [statusLoading, statusData, router]);
 
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+
     const onSubmit = (values: SetupFormValues) => {
         doSetup(
             { name: values.name, password: values.password },
             {
-                onSuccess: () => {
+                onSuccess: async () => {
                     toast.success("Akun admin berhasil dibuat!");
+                    await sleep(1000);
                     router.push("/dashboard/overview");
                 },
                 onError: (error: unknown) => {
