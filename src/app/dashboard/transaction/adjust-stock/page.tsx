@@ -107,6 +107,7 @@ import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-col
 import { DataTableToolbar } from "@/components/ui/data-table/data-table-toolbar";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
+import { ActionBranchButton } from "@/components/custom/action-branch-button";
 
 // --- Types & Schemas ---
 
@@ -400,9 +401,9 @@ export default function AdjustStockPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Penyesuaian Stok</h2>
-                <Button onClick={handleCreate}>
-                    <Plus className="mr-2 h-4 w-4" /> Penyesuaian Stok Baru
-                </Button>
+                <ActionBranchButton onClick={handleCreate}>
+                    Penyesuaian Stok Baru
+                </ActionBranchButton>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">

@@ -79,6 +79,7 @@ import { Member } from "@/types/master/member";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ActionBranchButton } from "@/components/custom/action-branch-button";
 
 // --- Types & Schemas ---
 
@@ -489,9 +490,9 @@ export default function SalesPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Daftar Penjualan</h2>
-                <Button onClick={() => handleOpenChange(true)}>
-                    <Plus className="mr-2 h-4 w-4" /> Penjualan Baru
-                </Button>
+                <ActionBranchButton onClick={() => handleOpenChange(true)}>
+                    Penjualan Baru
+                </ActionBranchButton>
             </div>
 
             {/* Toolbar */}

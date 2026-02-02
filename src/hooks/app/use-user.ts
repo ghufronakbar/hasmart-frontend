@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/app/user.service";
-import { queryKeys, invalidationMap } from "@/constants/query-keys";
+import { queryKeys } from "@/constants/query-keys";
 import {
   CreateUserDTO,
   ResetPasswordDTO,
@@ -75,5 +75,33 @@ export function useUpdateProfile() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: (data: ChangePasswordDTO) => userService.changePassword(data),
+  });
+}
+
+// --- First Time Setup Hooks ---
+
+export function useUserStatus() {
+  return useQuery({
+    queryKey: [...queryKeys.app.user.all, "status"],
+    queryFn: () => userService.getStatus(),
+    staleTime: 0, // Always check fresh
+    retry: false,
+  });
+}
+
+export function useFirstTimeSetup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { name: string; password: string }) =>
+      userService.firstTimeSetup(data),
+    onSuccess: (data) => {
+      // Store the token
+      if (data.data?.accessToken) {
+        localStorage.setItem("token", data.data.accessToken);
+      }
+      // Invalidate user status and profile queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.app.user.all });
+    },
   });
 }

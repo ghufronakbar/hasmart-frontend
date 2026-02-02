@@ -91,6 +91,7 @@ import { SellReturn, CreateSellReturnDTO, SellReturnItem } from "@/types/transac
 import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
+import { ActionBranchButton } from "@/components/custom/action-branch-button";
 
 // --- Types & Schemas ---
 
@@ -609,9 +610,9 @@ export default function SellReturnPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Retur Penjualan (B2B)</h2>
-                <Button onClick={() => handleOpenChange(true)}>
-                    <Plus className="mr-2 h-4 w-4" /> Retur Penjualan Baru
-                </Button>
+                <ActionBranchButton onClick={() => handleOpenChange(true)}>
+                    Retur Penjualan Baru
+                </ActionBranchButton>
             </div>
 
             {/* Toolbar */}

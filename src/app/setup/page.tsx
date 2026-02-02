@@ -1,0 +1,176 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useFirstTimeSetup, useUserStatus } from "@/hooks/app/use-user";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+const setupSchema = z.object({
+    name: z.string().min(3, "Nama minimal 3 karakter"),
+    password: z.string().min(6, "Password minimal 6 karakter"),
+    confirmPassword: z.string().min(6, "Password minimal 6 karakter"),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Password tidak cocok",
+    path: ["confirmPassword"],
+});
+
+type SetupFormValues = z.infer<typeof setupSchema>;
+
+export default function SetupPage() {
+    const router = useRouter();
+    const { data: statusData, isLoading: statusLoading } = useUserStatus();
+    const { mutate: doSetup, isPending } = useFirstTimeSetup();
+
+    const form = useForm<SetupFormValues>({
+        resolver: zodResolver(setupSchema),
+        defaultValues: {
+            name: "",
+            password: "",
+            confirmPassword: "",
+        },
+    });
+
+    // Redirect if users already exist
+    useEffect(() => {
+        if (!statusLoading && statusData?.data?.hasUsers === true) {
+            router.push("/login");
+        }
+    }, [statusLoading, statusData, router]);
+
+    const onSubmit = (values: SetupFormValues) => {
+        doSetup(
+            { name: values.name, password: values.password },
+            {
+                onSuccess: () => {
+                    toast.success("Akun admin berhasil dibuat!");
+                    router.push("/dashboard/overview");
+                },
+                onError: (error: unknown) => {
+                    const err = error as { response?: { data?: { errors?: { message?: string } } } };
+                    toast.error(
+                        err.response?.data?.errors?.message ||
+                        "Gagal membuat akun admin"
+                    );
+                },
+            }
+        );
+    };
+
+    if (statusLoading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    // If users exist, redirect (handled by useEffect)
+    if (statusData?.data?.hasUsers === true) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
+            <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-2xl font-bold">Selamat Datang!</CardTitle>
+                    <CardDescription>
+                        Buat akun admin pertama untuk memulai menggunakan sistem
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nama Pengguna</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="admin"
+                                                autoComplete="username"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="password"
+                                                placeholder="••••••••"
+                                                autoComplete="new-password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="confirmPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Konfirmasi Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="password"
+                                                placeholder="••••••••"
+                                                autoComplete="new-password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <Button type="submit" className="w-full" disabled={isPending}>
+                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Buat Akun Admin
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}

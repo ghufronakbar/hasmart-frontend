@@ -104,6 +104,7 @@ import { Sell, CreateSellDTO } from "@/types/transaction/sell";
 import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
+import { ActionBranchButton } from "@/components/custom/action-branch-button";
 
 // --- Types & Schemas ---
 
@@ -542,9 +543,9 @@ export default function SellPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Transaksi Penjualan (B2B)</h2>
-                <Button onClick={() => handleOpenChange(true)}>
-                    <Plus className="mr-2 h-4 w-4" /> Penjualan Baru
-                </Button>
+                <ActionBranchButton onClick={() => handleOpenChange(true)}>
+                    Penjualan Baru
+                </ActionBranchButton>
             </div>
 
             {/* Toolbar */}

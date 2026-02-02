@@ -85,6 +85,7 @@ import { Item, ItemVariant } from "@/types/master/item";
 import { Member } from "@/types/master/member";
 import { Combobox } from "@/components/custom/combobox";
 import { itemService } from "@/services";
+import { useRouter } from "next/navigation";
 
 // --- Schema (Mirrors SalesPage but streamlined) ---
 const discountSchema = z.object({
@@ -118,9 +119,10 @@ type CreateSalesFormValues = z.infer<typeof createSalesSchema>;
 type SalesItemFormValues = z.infer<typeof salesItemSchema>;
 
 export default function PointOfSalesPage() {
-    const { branch } = useBranch();
+    const { branch, isLoading: isBranchLoading } = useBranch();
     const [searchItem, setSearchItem] = useState("");
     const debouncedSearchItem = useDebounce(searchItem, 200);
+    const router = useRouter()
 
     // --- State ---
     const [memberVerified, setMemberVerified] = useState<Member | null>(null);
@@ -446,6 +448,14 @@ export default function PointOfSalesPage() {
             }
         });
     };
+
+    if (isBranchLoading) return <div className="w-full h-full flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin" />
+    </div>
+
+    if (!branch && !isBranchLoading) {
+        router.push("/dashboard");
+    }
 
     return (
         <div className="flex h-[calc(100vh-80px)] overflow-hidden gap-4 p-2 bg-muted/20 -m-4 sm:p-4">

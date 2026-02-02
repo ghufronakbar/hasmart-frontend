@@ -98,6 +98,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
+import { ActionBranchButton } from "@/components/custom/action-branch-button";
 
 // --- Schema ---
 const createTransferItemSchema = z.object({
@@ -397,9 +398,9 @@ export default function TransferPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Transfer Stok</h2>
-                <Button onClick={handleCreate}>
-                    <Plus className="mr-2 h-4 w-4" /> Transfer Baru
-                </Button>
+                <ActionBranchButton onClick={handleCreate}>
+                    Transfer Baru
+                </ActionBranchButton>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">

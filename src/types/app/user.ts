@@ -41,3 +41,16 @@ interface LoginRes {
   user: User;
 }
 export type LoginResponse = BaseResponse<LoginRes>;
+
+// First Time Setup
+export interface FirstTimeSetupDTO {
+  name: string;
+  password: string;
+}
+
+export interface UserStatus {
+  hasUsers: boolean;
+  userCount: number;
+}
+
+export type UserStatusResponse = BaseResponse<UserStatus>;

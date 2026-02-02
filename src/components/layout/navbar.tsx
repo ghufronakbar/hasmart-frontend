@@ -16,18 +16,16 @@ import { useState } from "react";
 import { MobileSidebar } from "./mobile-sidebar";
 import Link from "next/link";
 import { useProfile } from "@/hooks/app/use-user";
+import { useAuth } from "@/providers/auth-provider";
 
 export function Navbar() {
     const router = useRouter();
     const { branch, setBranch } = useBranch();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { data: profile } = useProfile();
+    const { logout } = useAuth()
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("selectedBranch");
-        router.push("/login");
-    };
+
 
     const handleSwitchBranch = () => {
         setBranch(null); // Clear context
@@ -90,7 +88,7 @@ export function Navbar() {
                     </Link>
                     <DropdownMenuItem>Bantuan</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>Keluar</DropdownMenuItem>
+                    <DropdownMenuItem onClick={logout}>Keluar</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         </header>

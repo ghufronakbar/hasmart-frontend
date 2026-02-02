@@ -2,6 +2,7 @@ import AuthGuard from "@/components/auth/auth-guard";
 import { Navbar } from "@/components/layout/navbar";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BranchProvider } from "@/providers/branch-provider";
+import { AuthProvider } from "@/providers/auth-provider";
 
 export default function DashboardLayout({
     children,

@@ -9,9 +9,27 @@ import {
   UserResponse,
   LoginDTO,
   LoginResponse,
+  FirstTimeSetupDTO,
+  UserStatusResponse,
 } from "@/types/app/user";
 
 export const userService = {
+  // Public: Check if system has users
+  getStatus: async () => {
+    const response =
+      await axiosInstance.get<UserStatusResponse>("/app/user/status");
+    return response.data;
+  },
+
+  // Public: First time setup (only works if no users exist)
+  firstTimeSetup: async (data: FirstTimeSetupDTO) => {
+    const response = await axiosInstance.post<LoginResponse>(
+      "/app/user/first-time-setup",
+      data,
+    );
+    return response.data;
+  },
+
   login: async (data: LoginDTO) => {
     const response = await axiosInstance.post<LoginResponse>(
       "/app/user/login",
