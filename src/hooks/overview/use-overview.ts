@@ -11,7 +11,6 @@ export const useFinancialSummary = (params?: FilterQuery) => {
   return useQuery({
     queryKey: queryKeys.overview.financialSummary(p),
     queryFn: () => overviewService.getFinancialSummary(p),
-    enabled: !!branch,
   });
 };
 
@@ -22,7 +21,6 @@ export const useSalesTrend = (params?: FilterQuery) => {
   return useQuery({
     queryKey: queryKeys.overview.salesTrend(p),
     queryFn: () => overviewService.getSalesTrend(p),
-    enabled: !!branch,
   });
 };
 
@@ -33,7 +31,6 @@ export const useTopProducts = (params?: FilterQuery) => {
   return useQuery({
     queryKey: queryKeys.overview.topProducts(p),
     queryFn: () => overviewService.getTopProducts(p),
-    enabled: !!branch,
   });
 };
 
@@ -44,6 +41,5 @@ export const useStockAlerts = (params?: FilterQuery) => {
   return useQuery({
     queryKey: queryKeys.overview.stockAlerts(p),
     queryFn: () => overviewService.getStockAlerts(p),
-    enabled: !!branch,
   });
 };

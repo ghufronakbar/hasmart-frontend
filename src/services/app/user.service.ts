@@ -7,9 +7,18 @@ import {
   ResetPasswordDTO,
   UserListResponse,
   UserResponse,
+  LoginDTO,
+  LoginResponse,
 } from "@/types/app/user";
 
 export const userService = {
+  login: async (data: LoginDTO) => {
+    const response = await axiosInstance.post<LoginResponse>(
+      "/app/user/login",
+      data,
+    );
+    return response.data;
+  },
   list: async (params?: FilterQuery) => {
     const response = await axiosInstance.get<UserListResponse>("/app/user", {
       params,

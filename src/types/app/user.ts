@@ -9,6 +9,11 @@ export interface User {
   updatedAt: string;
 }
 
+export interface LoginDTO {
+  name: string;
+  password: string;
+}
+
 export interface CreateUserDTO {
   name: string;
   password?: string;
@@ -30,3 +35,9 @@ export interface ChangePasswordDTO {
 
 export type UserResponse = BaseResponse<User>;
 export type UserListResponse = BaseResponse<User[]>;
+
+interface LoginRes {
+  accessToken: string;
+  user: User;
+}
+export type LoginResponse = BaseResponse<LoginRes>;

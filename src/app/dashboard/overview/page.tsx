@@ -85,13 +85,7 @@ export default function OverviewPage() {
     const topProducts = useTopProducts(filterParams);
     const stockAlerts = useStockAlerts({});
 
-    useEffect(() => {
-        if (!branchLoading && !branch) {
-            router.replace("/dashboard");
-        }
-    }, [branch, branchLoading, router]);
-
-    if (branchLoading || !branch) {
+    if (branchLoading) {
         return (
             <div className="flex h-full items-center justify-center p-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -111,7 +105,13 @@ export default function OverviewPage() {
                 <div>
                     <h1 className="text-2xl font-bold">Overview</h1>
                     <p className="text-muted-foreground">
-                        Dashboard cabang <strong>{branch.name}</strong>
+                        {branch ? (
+                            <>
+                                Dashboard cabang <strong>{branch?.name}</strong>
+                            </>
+                        ) : (
+                            "Menampilkan semua ringkasan data"
+                        )}
                     </p>
                 </div>
                 <DatePickerWithRange date={dateRange} setDate={setDateRange} />
