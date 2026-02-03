@@ -60,6 +60,7 @@ import { Member } from "@/types/master/member";
 import { Combobox } from "@/components/custom/combobox";
 import { itemService } from "@/services";
 import { useRouter } from "next/navigation";
+import { CreateMemberDialog } from "./components/create-member-dialog";
 
 // --- Schema (Mirrors SalesPage but streamlined) ---
 const discountSchema = z.object({
@@ -101,6 +102,7 @@ export default function PointOfSalesPage() {
     // --- State ---
     const [memberVerified, setMemberVerified] = useState<Member | null>(null);
     const [isVerifyingMember, setIsVerifyingMember] = useState(false);
+    const [isCreateMemberOpen, setIsCreateMemberOpen] = useState(false);
     const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -174,6 +176,23 @@ export default function PointOfSalesPage() {
             setMemberVerified(null);
         }
     }, [watchedMemberCode, memberVerified]);
+
+    const handleCreateMemberSuccess = (member: Member) => {
+        setMemberVerified(member);
+        form.setValue("memberCode", member.code);
+    };
+
+    const handleMemberKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleVerifyMember();
+        }
+    };
+
+    const handleClearMember = () => {
+        setMemberVerified(null);
+        form.setValue("memberCode", "");
+    };
 
     // Handle Item Selection (Add to Cart)
     const handleAddItem = (itemId: number) => {
@@ -646,6 +665,7 @@ export default function PointOfSalesPage() {
                                     placeholder="Member..."
                                     {...form.register("memberCode")}
                                     className="font-mono h-8 text-sm"
+                                    onKeyDown={handleMemberKeyDown}
                                 />
                                 <Button
                                     size="icon"
@@ -663,14 +683,35 @@ export default function PointOfSalesPage() {
                                 <div className="flex items-center gap-2 overflow-hidden">
                                     <User className="h-3 w-3 flex-none" />
                                     <span className="font-semibold truncate">{memberVerified.name}</span>
+                                    <Badge variant="outline" className="bg-white text-green-800 border-green-200 text-[10px] h-5 px-1.5 flex-none">
+                                        {memberVerified.masterMemberCategory?.name || "Member"}
+                                    </Badge>
                                 </div>
-                                <Badge variant="outline" className="bg-white text-green-800 border-green-200 text-[10px] h-5 px-1.5 flex-none">
-                                    {memberVerified.masterMemberCategory?.name || "Member"}
-                                </Badge>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 ml-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={handleClearMember}
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
                             </div>
                         )}
+                        <Button
+                            variant="outline"
+                            className="w-full border-dashed text-primary hover:text-primary/80 hover:bg-primary/5"
+                            onClick={() => setIsCreateMemberOpen(true)}
+                        >
+                            <Plus className="mr-2 h-4 w-4" /> Daftar Member Baru
+                        </Button>
                     </CardContent>
                 </Card>
+
+                <CreateMemberDialog
+                    open={isCreateMemberOpen}
+                    onOpenChange={setIsCreateMemberOpen}
+                    onSuccess={handleCreateMemberSuccess}
+                />
 
                 {/* Summary Card */}
                 <Card className="flex-1 flex flex-col shadow-lg border-primary/20 overflow-hidden">
