@@ -81,6 +81,7 @@ import { useSellByInvoice } from "@/hooks/transaction/use-sell"; // Added import
 import { useItems } from "@/hooks/master/use-item";
 import { useBranch } from "@/providers/branch-provider";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useModEnter } from "@/hooks/function/use-mod-enter";
 import { memberService } from "@/services/master/member.service";
 import { Member } from "@/types/master/member";
 import { SellReturn, CreateSellReturnDTO, SellReturnItem } from "@/types/transaction/sell-return";
@@ -302,6 +303,8 @@ export default function SellReturnPage() {
         control: form.control,
         name: "items",
     });
+
+    useModEnter(() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, sellPrice: 0, discounts: [] }));
 
     const watchedItems = useWatch({ control: form.control, name: "items" }) as SellReturnItemFormValues[];
     const watchedTaxPercentage = useWatch({ control: form.control, name: "taxPercentage" });
@@ -816,11 +819,14 @@ export default function SellReturnPage() {
 
                                             {/* Items Section */}
                                             <div>
-                                                <div className="flex justify-between items-center mb-4">
+                                                <div className="flex justify-between items-start mb-4">
                                                     <h3 className="text-lg font-semibold">Item Barang yang Diretur</h3>
-                                                    <Button type="button" size="sm" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, sellPrice: 0, discounts: [] })}>
-                                                        <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
-                                                    </Button>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <Button type="button" size="sm" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, sellPrice: 0, discounts: [] })}>
+                                                            <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
+                                                        </Button>
+                                                        <span className="text-muted-foreground/80 text-xs ml-2 font-normal">Atau tekan Ctrl+Enter</span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="space-y-4">

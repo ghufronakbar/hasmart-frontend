@@ -24,6 +24,7 @@ import {
     VisibilityState,
     PaginationState,
 } from "@tanstack/react-table";
+import { useModEnter } from "@/hooks/function/use-mod-enter";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -174,6 +175,8 @@ export default function AdjustStockPage() {
         control: form.control,
         name: "items",
     });
+
+    useModEnter(() => append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 }));
 
     const watchedItems = useWatch({ control: form.control, name: "items" });
 
@@ -525,11 +528,14 @@ export default function AdjustStockPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-start justify-between">
                                         <h4 className="text-sm font-semibold">List Barang</h4>
-                                        <Button type="button" size="sm" variant="outline" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 })}>
-                                            <CirclePlus className="mr-2 h-4 w-4" /> Tambah Barang
-                                        </Button>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <Button type="button" size="sm" variant="outline" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 })}>
+                                                <CirclePlus className="mr-2 h-4 w-4" /> Tambah Barang
+                                            </Button>
+                                            <span className="text-muted-foreground text-xs ml-2">Atau tekan Ctrl+Enter</span>
+                                        </div>
                                     </div>
 
                                     {fields.length === 0 && (
