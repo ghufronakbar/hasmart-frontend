@@ -3,12 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { itemService } from "@/services/master/item.service";
 import { queryKeys, invalidationMap } from "@/constants/query-keys";
-import {
-  CreateItemDTO,
-  CreateItemVariantDTO,
-  UpdateItemDTO,
-  UpdateItemVariantDTO,
-} from "@/types/master/item";
+import { CreateItemDTO, UpdateItemDTO } from "@/types/master/item";
 import { FilterQuery } from "@/types/common";
 import { useBranch } from "@/providers/branch-provider";
 
@@ -76,74 +71,7 @@ export function useDeleteItem() {
 }
 
 // --- Variant Hooks ---
-
-export function useAddVariant() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      itemId,
-      data,
-    }: {
-      itemId: number;
-      data: CreateItemVariantDTO;
-    }) => itemService.addVariant(itemId, data),
-    onSuccess: (_, variables) => {
-      invalidationMap.master.item().forEach((key) => {
-        queryClient.invalidateQueries({ queryKey: key });
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.master.items.detail(variables.itemId),
-      });
-    },
-  });
-}
-
-export function useUpdateVariant() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      itemId,
-      variantId,
-      data,
-    }: {
-      itemId: number;
-      variantId: number;
-      data: UpdateItemVariantDTO;
-    }) => itemService.updateVariant(itemId, variantId, data),
-    onSuccess: (_, variables) => {
-      invalidationMap.master.item().forEach((key) => {
-        queryClient.invalidateQueries({ queryKey: key });
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.master.items.detail(variables.itemId),
-      });
-    },
-  });
-}
-
-export function useDeleteVariant() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      itemId,
-      variantId,
-    }: {
-      itemId: number;
-      variantId: number;
-    }) => itemService.deleteVariant(itemId, variantId),
-    onSuccess: (_, variables) => {
-      invalidationMap.master.item().forEach((key) => {
-        queryClient.invalidateQueries({ queryKey: key });
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.master.items.detail(variables.itemId),
-      });
-    },
-  });
-}
+// Deprecated: Variant operations are now handled via bulk update on item
 
 export function useItemByCode(code: string | undefined) {
   return useQuery({

@@ -54,6 +54,16 @@ export interface UpdateItemDTO {
   masterSupplierId?: number;
   masterItemCategoryId?: number;
   isActive?: boolean;
+  masterItemVariants?: MasterItemVariantUpdateDTO[];
+}
+
+export interface MasterItemVariantUpdateDTO {
+  id?: number;
+  unit: string;
+  amount: number;
+  sellPrice: number;
+  isBaseUnit: boolean;
+  action: "create" | "update" | "delete";
 }
 
 export type UpdateItemVariantDTO = Partial<CreateItemVariantDTO>;

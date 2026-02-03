@@ -2,11 +2,9 @@ import { axiosInstance } from "@/lib/axios";
 import { FilterQuery } from "@/types/common";
 import {
   CreateItemDTO,
-  CreateItemVariantDTO,
   ItemListResponse,
   ItemResponse,
   UpdateItemDTO,
-  UpdateItemVariantDTO,
   ItemByCodeResponse,
 } from "@/types/master/item";
 
@@ -47,37 +45,6 @@ export const itemService = {
   delete: async (id: number | string) => {
     const response = await axiosInstance.delete<ItemResponse>(
       `/master/item/${id}`,
-    );
-    return response.data;
-  },
-
-  // Variant operations
-  addVariant: async (itemId: number | string, data: CreateItemVariantDTO) => {
-    const response = await axiosInstance.post<ItemResponse>(
-      `/master/item/${itemId}/variant`,
-      data,
-    );
-    return response.data;
-  },
-
-  updateVariant: async (
-    itemId: number | string,
-    variantId: number | string,
-    data: UpdateItemVariantDTO,
-  ) => {
-    const response = await axiosInstance.put<ItemResponse>(
-      `/master/item/${itemId}/variant/${variantId}`,
-      data,
-    );
-    return response.data;
-  },
-
-  deleteVariant: async (
-    itemId: number | string,
-    variantId: number | string,
-  ) => {
-    const response = await axiosInstance.delete<ItemResponse>(
-      `/master/item/${itemId}/variant/${variantId}`,
     );
     return response.data;
   },

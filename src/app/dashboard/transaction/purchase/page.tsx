@@ -117,6 +117,7 @@ import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
+import { useModEnter } from "@/hooks/function/use-mod-enter";
 
 type CreatePurchaseFormValues = z.infer<typeof createPurchaseSchema>;
 type PurchaseItemFormValues = z.infer<typeof purchaseItemSchema>;
@@ -192,9 +193,6 @@ export default function PurchasePage() {
         if (!editingId || !purchaseDetail?.data) return listItems;
 
         const detailItems = purchaseDetail.data.items?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
-
-        console.log("DEBUG: listItems count", listItems.length);
-        console.log("DEBUG: detailItems count", detailItems.length);
 
         // Use Map to deduplicate by ID
         const map = new Map();
@@ -437,6 +435,15 @@ export default function PurchasePage() {
         form.setValue(`items.${index}.masterItemVariantId`, variantId);
     };
 
+    const handleNewItem = () => {
+        append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, purchasePrice: 0, discounts: [] })
+    }
+
+    useModEnter(() => handleNewItem(), {
+        enabled: true,
+    });
+
+
     // Delete Logic
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const handleDelete = () => {
@@ -600,9 +607,6 @@ export default function PurchasePage() {
                                     {editingId ? "Perbarui informasi pembelian di bawah ini." : "Input detail transaksi pembelian barang ke supplier."}
                                 </DialogDescription>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={() => setIsCreateOpen(false)}>
-                                <X className="h-4 w-4" />
-                            </Button>
                         </div>
                     </DialogHeader>
 
@@ -674,11 +678,14 @@ export default function PurchasePage() {
 
                                     {/* Items Section */}
                                     <div>
-                                        <div className="flex justify-between items-center mb-4">
+                                        <div className="flex justify-between items-start mb-4">
                                             <h3 className="text-lg font-semibold">Item Barang</h3>
-                                            <Button type="button" size="sm" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, purchasePrice: 0, discounts: [] })}>
-                                                <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
-                                            </Button>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <Button type="button" size="sm" onClick={handleNewItem}>
+                                                    <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
+                                                </Button>
+                                                <span className="text-xs text-muted-foreground">Atau tekan Ctrl+Enter</span>
+                                            </div>
                                         </div>
 
                                         <div className="space-y-4">

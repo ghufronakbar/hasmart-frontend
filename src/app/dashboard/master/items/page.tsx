@@ -67,15 +67,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
-import { Item, ItemVariant } from "@/types/master/item";
+import { Item } from "@/types/master/item";
 import {
     useItems,
     useCreateItem,
     useUpdateItem,
     useDeleteItem,
-    useAddVariant,
-    useUpdateVariant,
-    useDeleteVariant,
 } from "@/hooks/master/use-item";
 import { useSuppliers } from "@/hooks/master/use-supplier";
 import { useItemCategories } from "@/hooks/master/use-item-category";
@@ -91,8 +88,11 @@ const variantSchema = z.object({
     id: z.number().optional(), // For edit
     unit: z.string().min(1, "Satuan wajib"),
     amount: z.coerce.number().min(1, "Jumlah konversi min 1"),
+    buyPrice: z.coerce.number(), // hanya untuk display
+    profitPercentage: z.coerce.number(), // TODO: sementara display
     sellPrice: z.coerce.number().min(0, "Harga jual min 0"),
     isBaseUnit: z.boolean().default(false),
+    action: z.enum(["create", "update", "delete"]).default("create"),
 });
 
 const createItemSchema = z.object({
@@ -101,6 +101,7 @@ const createItemSchema = z.object({
     masterSupplierId: z.coerce.number().min(1, "Supplier wajib"),
     masterItemCategoryId: z.coerce.number().min(1, "Kategori wajib"),
     isActive: z.boolean().default(true),
+    buyPrice: z.coerce.number(), // TODO: sementara display
     masterItemVariants: z.array(variantSchema)
         .min(1, "Minimal 1 variant wajib")
         .refine((variants) => {
@@ -117,15 +118,9 @@ const createItemSchema = z.object({
         }),
 });
 
-const updateItemSchema = z.object({
-    name: z.string().min(1, "Nama item wajib"),
-    masterSupplierId: z.coerce.number().min(1, "Supplier wajib"),
-    masterItemCategoryId: z.coerce.number().min(1, "Kategori wajib"),
-    isActive: z.boolean().default(true),
-});
+
 
 type CreateItemFormValues = z.infer<typeof createItemSchema>;
-type UpdateItemFormValues = z.infer<typeof updateItemSchema>;
 
 
 
@@ -155,9 +150,6 @@ export default function ItemsPage() {
     const { mutate: createItem, isPending: isCreating } = useCreateItem();
     const { mutate: updateItem, isPending: isUpdating } = useUpdateItem();
     const { mutate: deleteItem } = useDeleteItem();
-    const { mutate: addVariant, isPending: isAddingVariant } = useAddVariant();
-    const { mutate: updateVariant, isPending: isUpdatingVariant } = useUpdateVariant();
-    const { mutate: deleteVariant } = useDeleteVariant();
 
     // --- Dialog States ---
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -165,8 +157,8 @@ export default function ItemsPage() {
     const [editingItem, setEditingItem] = useState<Item | null>(null);
 
     // Variant tracking for edit mode
-    const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);
-    const [originalVariants, setOriginalVariants] = useState<ItemVariant[]>([]);
+    // removed: variantsToDelete (now handled via action='delete')
+    // removed: originalVariants (no longer needed for diffing, we just trust the form state action)
 
     const [deletingItem, setDeletingItem] = useState<Item | null>(null);
 
@@ -202,11 +194,53 @@ export default function ItemsPage() {
 
 
 
-    // Effect to auto-set isBaseUnit based on amount = 1
+    // Effect to auto-set isBaseUnit based on amount = 1 AND calculate prices
     useEffect(() => {
         const subscription = unifiedForm.watch((value, { name }) => {
-            if (name?.includes('amount')) {
-                // Zod resolver handles the validation feedback
+            // Price Calculation Logic
+            // 1. Variant specific change (profit or amount)
+            const matchVariant = name?.match(/masterItemVariants\.(\d+)\.(profitPercentage|amount)/);
+            if (matchVariant) {
+                const index = parseInt(matchVariant[1]);
+
+                // Get current values
+                const itemBuyPrice = unifiedForm.getValues('buyPrice') || 0;
+                const variant = unifiedForm.getValues(`masterItemVariants.${index}`);
+
+                if (variant) {
+                    const amount = parseFloat(variant.amount?.toString() || "0");
+                    const profitPct = parseFloat(variant.profitPercentage?.toString() || "0");
+
+                    // 1. Calculate Variant Buy Price = Item Buy Price * Amount
+                    const variantBuyPrice = itemBuyPrice * amount;
+
+                    // 2. Calculate Sell Price = Variant Buy Price + (Profit)
+                    // Profit = Variant Buy Price * Profit% / 100
+                    const sellPrice = variantBuyPrice + (variantBuyPrice * profitPct / 100);
+
+                    // Update fields
+                    unifiedForm.setValue(`masterItemVariants.${index}.buyPrice`, parseFloat(variantBuyPrice.toFixed(2)));
+                    unifiedForm.setValue(`masterItemVariants.${index}.sellPrice`, parseFloat(sellPrice.toFixed(2)));
+                }
+            }
+
+            // 2. Main Item Buy Price Change -> Update ALL variants
+            if (name === 'buyPrice') {
+                const itemBuyPrice = parseFloat(value.buyPrice?.toString() || "0");
+                const currentVariants = unifiedForm.getValues('masterItemVariants');
+
+                currentVariants.forEach((variant, index) => {
+                    // Check if not deleted? Actually we should update all even if soft deleted, just in case restored.
+                    const amount = parseFloat(variant.amount?.toString() || "0");
+                    const profitPct = parseFloat(variant.profitPercentage?.toString() || "0");
+
+                    // Recalculate based on new Item Buy Price
+                    const variantBuyPrice = itemBuyPrice * amount;
+                    const sellPrice = variantBuyPrice + (variantBuyPrice * profitPct / 100);
+
+                    unifiedForm.setValue(`masterItemVariants.${index}.buyPrice`, parseFloat(variantBuyPrice.toFixed(2)));
+                    unifiedForm.setValue(`masterItemVariants.${index}.sellPrice`, parseFloat(sellPrice.toFixed(2)));
+                });
             }
         });
         return () => subscription.unsubscribe();
@@ -219,8 +253,9 @@ export default function ItemsPage() {
     const handleOpenCreate = () => {
         setFormMode('create');
         setEditingItem(null);
-        setVariantsToDelete([]);
-        setOriginalVariants([]);
+        setEditingItem(null);
+        // setVariantsToDelete([]);
+        // setOriginalVariants([]);
         unifiedForm.reset({
             name: "",
             code: "",
@@ -231,13 +266,15 @@ export default function ItemsPage() {
                 unit: "",
                 amount: 1,
                 sellPrice: 0,
-                isBaseUnit: true
+                isBaseUnit: true,
+                action: "create"
             },
             {
                 unit: "",
                 amount: 12,
                 sellPrice: 0,
-                isBaseUnit: false
+                isBaseUnit: false,
+                action: "create"
             }],
         });
         setIsFormOpen(true);
@@ -247,8 +284,8 @@ export default function ItemsPage() {
     const handleOpenEdit = (item: Item) => {
         setFormMode('edit');
         setEditingItem(item);
-        setOriginalVariants(item.masterItemVariants || []);
-        setVariantsToDelete([]);
+        // setOriginalVariants(item.masterItemVariants || []);
+        // setVariantsToDelete([]);
 
         unifiedForm.reset({
             name: item.name,
@@ -256,12 +293,16 @@ export default function ItemsPage() {
             masterSupplierId: item.masterSupplierId,
             masterItemCategoryId: item.masterItemCategoryId,
             isActive: item.isActive,
+            buyPrice: parseFloat(item.recordedBuyPrice),
             masterItemVariants: item.masterItemVariants?.map(v => ({
                 id: v.id,
                 unit: v.unit,
                 amount: v.amount,
+                buyPrice: parseFloat((parseFloat(item.recordedBuyPrice) * v.amount).toFixed(2)), // display
+                profitPercentage: parseFloat(v.recordedProfitPercentage),
                 sellPrice: parseFloat(v.sellPrice), // Parse string from API to number for form
                 isBaseUnit: v.isBaseUnit,
+                action: "update" // Existing variants start as 'update'
             })) || [],
         });
         setIsFormOpen(true);
@@ -269,14 +310,37 @@ export default function ItemsPage() {
 
     // Submit handler for unified form
     const onUnifiedSubmit = async (values: CreateItemFormValues) => {
-        const processedVariants = values.masterItemVariants.map(v => ({
-            ...v,
-            isBaseUnit: v.amount === 1
-        }));
+        // Filter out variants that are marked as deleted AND are new (action=create) - they shouldn't be sent at all? 
+        // Logic: 
+        // - id & action='delete' -> Send to backend to delete
+        // - no id & action='delete' -> Should have been removed from array by UI, but if exists, ignore.
+        // - action='create' / 'update' -> Send.
+
+        const processedVariants = values.masterItemVariants
+            .filter(v => {
+                // If it's a new item (no id) and marked deleted, don't send it.
+                if (!v.id && v.action === 'delete') return false;
+                return true;
+            })
+            .map(v => ({
+                ...v,
+                isBaseUnit: v.amount === 1,
+                // Ensure action is set. 
+                // For legacy safety: if there's an ID, default action is update. If no ID, create.
+                action: v.action || (v.id ? 'update' : 'create')
+            }));
+
+        const hasBaseUnit = processedVariants.some(v => v.amount === 1 && v.action !== 'delete');
+        if (!hasBaseUnit) {
+            toast.error("Minimal harus ada satu Base Unit (Konversi 1) yang aktif.");
+            return;
+        }
 
         if (formMode === 'create') {
-            // Create mode
-            createItem({ ...values, masterItemVariants: processedVariants }, {
+            // Create mode - strip any 'delete' actions just in case, though UI handles it.
+            const createVariants = processedVariants.filter(v => v.action !== 'delete');
+
+            createItem({ ...values, masterItemVariants: createVariants }, {
                 onSuccess: () => {
                     setIsFormOpen(false);
                     toast.success("Item berhasil dibuat");
@@ -286,79 +350,27 @@ export default function ItemsPage() {
                 }
             });
         } else {
-            // Edit mode
+            // Edit mode - Send ALL variants including deleted ones
             if (!editingItem) return;
 
-            const itemData: UpdateItemFormValues = {
+            const itemData = { // UpdateItemDTO extended
                 name: values.name,
                 masterSupplierId: values.masterSupplierId,
                 masterItemCategoryId: values.masterItemCategoryId,
                 isActive: values.isActive,
+                masterItemVariants: processedVariants,
+                buyPrice: values.buyPrice
             };
 
-            try {
-                // Update item
-                await new Promise((resolve, reject) => {
-                    updateItem({ id: editingItem.id, data: itemData }, {
-                        onSuccess: resolve,
-                        onError: reject
-                    });
-                });
-
-                // Handle variants
-                const promises: Promise<unknown>[] = [];
-
-                // Delete marked variants
-                variantsToDelete.forEach(variantId => {
-                    promises.push(new Promise((resolve, reject) => {
-                        deleteVariant({ itemId: editingItem.id, variantId }, {
-                            onSuccess: resolve,
-                            onError: reject
-                        });
-                    }));
-                });
-
-                // Process each variant
-                values.masterItemVariants.forEach(variant => {
-                    const processedVariant = { ...variant, isBaseUnit: variant.amount === 1 };
-
-                    if (!variant.id) {
-                        // New variant
-                        promises.push(new Promise((resolve, reject) => {
-                            addVariant({ itemId: editingItem.id, data: processedVariant as any }, {
-                                onSuccess: resolve,
-                                onError: reject
-                            });
-                        }));
-                    } else {
-                        // Check if modified
-                        const original = originalVariants.find(v => v.id === variant.id);
-                        const hasChanged = !original ||
-                            original.unit !== variant.unit ||
-                            original.amount !== variant.amount ||
-                            original.sellPrice !== String(variant.sellPrice);
-
-                        if (hasChanged) {
-                            promises.push(new Promise((resolve, reject) => {
-                                updateVariant({
-                                    itemId: editingItem.id,
-                                    variantId: variant.id!,
-                                    data: processedVariant
-                                }, {
-                                    onSuccess: resolve,
-                                    onError: reject
-                                });
-                            }));
-                        }
-                    }
-                });
-
-                await Promise.all(promises);
-                setIsFormOpen(false);
-                toast.success("Item berhasil diperbarui");
-            } catch (err) {
-                toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal memperbarui item");
-            }
+            updateItem({ id: editingItem.id, data: itemData }, {
+                onSuccess: () => {
+                    setIsFormOpen(false);
+                    toast.success("Item berhasil diperbarui");
+                },
+                onError: (err) => {
+                    toast.error(err instanceof AxiosError ? err?.response?.data?.errors?.message : "Gagal memperbarui item");
+                }
+            });
         }
     };
 
@@ -367,20 +379,34 @@ export default function ItemsPage() {
         append({
             unit: "",
             amount: 1,
+            buyPrice: 0,
+            profitPercentage: 0,
             sellPrice: 0,
-            isBaseUnit: false
+            isBaseUnit: false,
+            action: "create"
         });
     };
 
     // Delete variant from form
     const handleVariantDelete = (index: number) => {
-        const variant = variantFields[index];
-        if (variant.id) {
-            // Existing variant - mark for deletion
-            setVariantsToDelete(prev => [...prev, variant.id]);
+        // Read current form state directly to ensure we have the latest action
+        const currentVariant = unifiedForm.getValues(`masterItemVariants.${index}`);
+
+        if (currentVariant.id) {
+            // Existing variant - Toggle Soft Delete
+            const currentAction = currentVariant.action;
+
+            if (currentAction === 'delete') {
+                // Restore
+                unifiedForm.setValue(`masterItemVariants.${index}.action`, 'update');
+            } else {
+                // Soft Delete
+                unifiedForm.setValue(`masterItemVariants.${index}.action`, 'delete');
+            }
+        } else {
+            // New variant - Remove immediately
+            remove(index);
         }
-        // Remove from form
-        remove(index);
     };
 
     const handleDeleteItem = () => {
@@ -595,11 +621,11 @@ export default function ItemsPage() {
             <Dialog open={isFormOpen} onOpenChange={(open) => {
                 if (!open) {
                     setIsFormOpen(false);
-                    setVariantsToDelete([]);
-                    setOriginalVariants([]);
+                    // setVariantsToDelete([]);
+                    // setOriginalVariants([]);
                 }
             }}>
-                <DialogContent className="!max-w-6xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-6xl! max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{formMode === 'create' ? 'Tambah' : 'Edit'} Item</DialogTitle>
                         <DialogDescription>
@@ -668,6 +694,16 @@ export default function ItemsPage() {
                                         </FormItem>
                                     )} />
 
+                                    {formMode === "edit" &&
+                                        <FormField control={unifiedForm.control} name="buyPrice" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Harga Beli</FormLabel>
+                                                <FormControl><Input placeholder="10000"  {...field} type="number" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    }
+
                                     {formMode === 'edit' && (
                                         <FormField control={unifiedForm.control} name="isActive" render={({ field }) => (
                                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
@@ -686,61 +722,117 @@ export default function ItemsPage() {
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center border-b pb-2">
                                         <h3 className="text-sm font-medium">Variants ({variantFields.length})</h3>
-                                        {/* <Button type="button" variant="ghost" size="sm" onClick={handleVariantAdd}>
-                                            <CirclePlus className="mr-1 h-4 w-4" /> Tambah
-                                        </Button> */}
                                     </div>
 
                                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                                        {variantFields.map((field, index) => (
-                                            <div key={field.id} className="relative border p-3 rounded-md bg-muted/20">
-                                                {variantFields.length > 1 && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="absolute top-1 right-1 h-6 w-6 text-red-500 hover:bg-red-50"
-                                                        onClick={() => handleVariantDelete(index)}
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                                <div className="space-y-2">
-                                                    <div className="flex flex-row gap-2">
-                                                        <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.unit`} render={({ field }) => (
-                                                            <FormItem className="w-full">
-                                                                <FormLabel className="text-xs">Satuan</FormLabel>
-                                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                                    <FormControl><SelectTrigger className="w-full">
-                                                                        <SelectValue placeholder="Pilih" />
-                                                                    </SelectTrigger></FormControl>
-                                                                    <SelectContent>
-                                                                        {units?.data?.map(u => (
-                                                                            <SelectItem key={u.id} value={u.unit}>{u.unit}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )} />
-                                                        <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.amount`} render={({ field }) => (
-                                                            <FormItem className="w-full">
-                                                                <FormLabel className="text-xs">Konversi</FormLabel>
-                                                                <FormControl><Input type="number" {...field} className="w-full" /></FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )} />
+                                        {variantFields.map((field, index) => {
+                                            // Watch the action for this specific variant to ensure UI updates immediately
+                                            // accessing field.action directly from useFieldArray is not reactive to setValue
+                                            const currentVariant = unifiedForm.watch(`masterItemVariants.${index}`);
+                                            const action = currentVariant?.action;
+
+                                            return (
+                                                <div key={field.id} className="relative border p-3 rounded-md bg-muted/20">
+                                                    {/* New Variant Indicator */}
+                                                    {action === 'create' && (
+                                                        <div className="absolute top-0 left-0">
+                                                            <div className="bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-br-md rounded-tl-md font-bold shadow-sm">
+                                                                BARU
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {variantFields.length > 1 && action !== 'delete' && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="absolute top-1 right-1 h-6 w-6 text-red-500 hover:bg-red-50"
+                                                            onClick={() => handleVariantDelete(index)}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+
+                                                    {/* Soft Delete Overlay */}
+                                                    {action === 'delete' && (
+                                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/50 backdrop-blur-[1px]">
+                                                            <div className="font-bold text-red-600 border border-red-600 px-3 py-1 rounded bg-white mb-2">
+                                                                AKAN DIHAPUS
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="mt-2 bg-white hover:bg-slate-50 border-red-200 text-red-600 hover:text-red-700 cursor-pointer pointer-events-auto"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleVariantDelete(index);
+                                                                }}
+                                                            >
+                                                                Batal Hapus
+                                                            </Button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Variant Content with Soft Delete Style */}
+                                                    <div className={`space-y-2 mt-2 ${action === 'delete' ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+                                                        <div className="flex flex-row gap-2">
+                                                            <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.unit`} render={({ field }) => (
+                                                                <FormItem className="w-full">
+                                                                    <FormLabel className="text-xs">Satuan</FormLabel>
+                                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                                        <FormControl><SelectTrigger className="w-full">
+                                                                            <SelectValue placeholder="Pilih" />
+                                                                        </SelectTrigger></FormControl>
+                                                                        <SelectContent>
+                                                                            {units?.data?.map(u => (
+                                                                                <SelectItem key={u.id} value={u.unit}>{u.unit}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )} />
+                                                            <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.amount`} render={({ field }) => (
+                                                                <FormItem className="w-full">
+                                                                    <FormLabel className="text-xs">Konversi</FormLabel>
+                                                                    <FormControl><Input type="number" {...field} className="w-full" /></FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
+                                                        <div className="flex flex-row gap-2">
+                                                            {formMode === "edit" &&
+                                                                <>
+                                                                    <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.buyPrice`} render={({ field }) => (
+                                                                        <FormItem className="w-full">
+                                                                            <FormLabel className="text-xs">Harga Beli</FormLabel>
+                                                                            <FormControl><Input type="number" {...field} className="w-full" disabled /></FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )} />
+                                                                    <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.profitPercentage`} render={({ field }) => (
+                                                                        <FormItem className="w-full">
+                                                                            <FormLabel className="text-xs">Profit (%)</FormLabel>
+                                                                            <FormControl><Input type="number" {...field} className="w-full" /></FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )} />
+                                                                </>
+                                                            }
+                                                            <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.sellPrice`} render={({ field }) => (
+                                                                <FormItem className="w-full">
+                                                                    <FormLabel className="text-xs">Harga Jual</FormLabel>
+                                                                    <FormControl><Input type="number" {...field} className="w-full" /></FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
                                                     </div>
-                                                    <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.sellPrice`} render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel className="text-xs">Harga Jual</FormLabel>
-                                                            <FormControl><Input type="number" {...field} /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )} />
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )
+                                        })}
                                         <Button type="button" variant="ghost" size="sm" onClick={handleVariantAdd}>
                                             <CirclePlus className="mr-1 h-4 w-4" /> Tambah
                                         </Button>
