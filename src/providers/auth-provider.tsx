@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = useCallback(() => {
         // Clear token from localStorage
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
 
         // Clear selected branch
         localStorage.removeItem("selectedBranch");

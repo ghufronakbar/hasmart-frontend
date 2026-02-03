@@ -1,5 +1,8 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/constants/query-keys";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +32,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -54,6 +58,13 @@ export default function LoginPage() {
 
             if (response.data?.accessToken) {
                 localStorage.setItem("token", response.data.accessToken);
+                if (response.data.refreshToken) {
+                    localStorage.setItem("refreshToken", response.data.refreshToken);
+                }
+
+                // Clear any stale auth state
+                await queryClient.resetQueries({ queryKey: queryKeys.app.user.all });
+
                 // Ensure selectedBranch is cleared or handled appropriately on new login
                 // localStorage.removeItem("selectedBranch"); 
                 router.push("/dashboard");

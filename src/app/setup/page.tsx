@@ -1,11 +1,15 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/constants/query-keys";
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFirstTimeSetup, useUserStatus } from "@/hooks/app/use-user";
+import { LoginResponse } from "@/types/app/user";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -40,6 +44,7 @@ type SetupFormValues = z.infer<typeof setupSchema>;
 
 export default function SetupPage() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const { data: statusData, isLoading: statusLoading } = useUserStatus();
     const { mutate: doSetup, isPending } = useFirstTimeSetup();
 
@@ -66,7 +71,18 @@ export default function SetupPage() {
         doSetup(
             { name: values.name, password: values.password },
             {
-                onSuccess: async () => {
+                onSuccess: async (data) => {
+                    const response = data as unknown as LoginResponse;
+                    if (response.data?.accessToken) {
+                        localStorage.setItem("token", response.data.accessToken);
+                        if (response.data.refreshToken) {
+                            localStorage.setItem("refreshToken", response.data.refreshToken);
+                        }
+                    }
+
+                    // Clear any stale auth state
+                    await queryClient.resetQueries({ queryKey: queryKeys.app.user.all });
+
                     toast.success("Akun admin berhasil dibuat!");
                     await sleep(1000);
                     router.push("/dashboard/overview");

@@ -38,6 +38,7 @@ export type UserListResponse = BaseResponse<User[]>;
 
 interface LoginRes {
   accessToken: string;
+  refreshToken: string;
   user: User;
 }
 export type LoginResponse = BaseResponse<LoginRes>;

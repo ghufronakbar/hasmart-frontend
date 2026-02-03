@@ -81,4 +81,16 @@ export const userService = {
     );
     return response.data;
   },
+
+  refreshToken: async (token: string) => {
+    // We use a clean instance or fetch to avoid interceptor loops if we were using the same instance (though logic usually handles it).
+    // But since the interceptor uses axiosInstance, we can use it here as long as we don't trigger 401s recursively.
+    // The interceptor logic usually prevents this by not retrying the refresh endpoint itself.
+    const response = await axiosInstance.post<{
+      data: { accessToken: string };
+    }>("/app/user/refresh", {
+      refreshToken: token,
+    });
+    return response.data;
+  },
 };
