@@ -11,6 +11,7 @@ import {
   LoginResponse,
   FirstTimeSetupDTO,
   UserStatusResponse,
+  UpdateUserAccessDTO,
 } from "@/types/app/user";
 
 export const userService = {
@@ -66,6 +67,14 @@ export const userService = {
 
   me: async () => {
     const response = await axiosInstance.get<UserResponse>("/app/user/whoami");
+    return response.data;
+  },
+
+  updateAccess: async (id: number, data: UpdateUserAccessDTO) => {
+    const response = await axiosInstance.put<UserResponse>(
+      `/app/user/${id}/access`,
+      data,
+    );
     return response.data;
   },
 

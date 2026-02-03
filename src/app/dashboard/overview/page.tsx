@@ -23,6 +23,7 @@ import {
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid, Bar, BarChart } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 const chartConfig = {
     value: {
@@ -62,6 +63,8 @@ function formatCompact(value: number): string {
 
 export default function OverviewPage() {
     const { branch, isLoading: branchLoading } = useBranch();
+
+    useAccessControl([UserAccess.accessOverviewRead], true);
 
     // Default to current month
     const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {

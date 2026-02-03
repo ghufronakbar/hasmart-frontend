@@ -66,14 +66,14 @@ export default function LoginPage() {
                 await queryClient.resetQueries({ queryKey: queryKeys.app.user.all });
 
                 // Ensure selectedBranch is cleared or handled appropriately on new login
-                // localStorage.removeItem("selectedBranch"); 
-                router.push("/dashboard");
+                localStorage.removeItem("selectedBranch");
+                router.push("/dashboard/profile");
             } else {
                 setError("Gagal masuk: Token tidak diterima dari server");
             }
         } catch (err: unknown) {
             console.error(err);
-            setError("Nama pengguna atau kata sandi salah, atau terjadi kesalahan server.");
+            setError("Nama pengguna atau kata sandi salah");
         } finally {
             setIsLoading(false);
         }

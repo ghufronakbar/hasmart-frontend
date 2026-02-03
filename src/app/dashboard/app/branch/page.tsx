@@ -70,6 +70,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import { DataTableToolbar } from "@/components/ui/data-table/data-table-toolbar";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Validation Schema ---
 const branchSchema = z.object({
@@ -83,6 +84,7 @@ const branchSchema = z.object({
 type BranchFormValues = z.infer<typeof branchSchema>;
 
 export default function BranchPage() {
+    const hasAccess = useAccessControl([UserAccess.accessAppBranchWrite], false);
     // --- State ---
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
@@ -301,9 +303,11 @@ export default function BranchPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Manajemen Cabang</h2>
-                <Button onClick={() => { setEditingBranch(null); setIsCreateOpen(true); }}>
-                    <Plus className="mr-2 h-4 w-4" /> Tambah Cabang
-                </Button>
+                {hasAccess &&
+                    <Button onClick={() => { setEditingBranch(null); setIsCreateOpen(true); }}>
+                        <Plus className="mr-2 h-4 w-4" /> Tambah Cabang
+                    </Button>
+                }
             </div>
 
             <DataTableToolbar

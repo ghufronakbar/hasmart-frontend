@@ -118,6 +118,7 @@ import { DatePickerWithRange } from "@/components/custom/date-picker-with-range"
 import { Combobox } from "@/components/custom/combobox";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
 import { useModEnter } from "@/hooks/function/use-mod-enter";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 type CreatePurchaseFormValues = z.infer<typeof createPurchaseSchema>;
 type PurchaseItemFormValues = z.infer<typeof purchaseItemSchema>;
@@ -125,6 +126,8 @@ type PurchaseItemFormValues = z.infer<typeof purchaseItemSchema>;
 
 
 export default function PurchasePage() {
+    useAccessControl([UserAccess.accessTransactionPurchaseRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessTransactionPurchaseWrite], false);
     const { branch } = useBranch();
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [searchTerm, setSearchTerm] = useState("");
@@ -521,6 +524,7 @@ export default function PurchasePage() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const p = row.original;
+                if (!hasAccess) return null;
                 return (
                     <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(p)}>
@@ -535,7 +539,7 @@ export default function PurchasePage() {
                 );
             },
         },
-    ], []);
+    ], [hasAccess]);
 
     const table = useReactTable({
         data: purchaseData?.data || [],
@@ -559,9 +563,11 @@ export default function PurchasePage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Transaksi Pembelian</h2>
-                <ActionBranchButton onClick={() => handleOpenChange(true)}>
-                    Transaksi Baru
-                </ActionBranchButton>
+                {hasAccess &&
+                    <ActionBranchButton onClick={() => handleOpenChange(true)}>
+                        Transaksi Baru
+                    </ActionBranchButton>
+                }
             </div>
 
             {/* Toolbar */}

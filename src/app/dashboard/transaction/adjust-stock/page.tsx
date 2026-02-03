@@ -91,6 +91,7 @@ import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-col
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Types & Schemas ---
 
@@ -116,6 +117,8 @@ const createAdjustStockSchema = z.object({
 type CreateAdjustStockFormValues = z.infer<typeof createAdjustStockSchema>;
 
 export default function AdjustStockPage() {
+    useAccessControl([UserAccess.accessTransactionAdjustmentRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessTransactionAdjustmentWrite], false);
     const { branch } = useBranch();
     const [search, setSearch] = useState("");
     const [pagination, setPagination] = useState<PaginationState>({
@@ -372,9 +375,11 @@ export default function AdjustStockPage() {
                     <Button variant="ghost" size="icon" onClick={() => handleViewDetail(row.original.id)}>
                         <Eye className="h-4 w-4 text-blue-500" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(row.original.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                    {hasAccess &&
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(row.original.id)}>
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                    }
                 </div>
             ),
         },
@@ -402,9 +407,11 @@ export default function AdjustStockPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Penyesuaian Stok</h2>
-                <ActionBranchButton onClick={handleCreate}>
-                    Penyesuaian Stok Baru
-                </ActionBranchButton>
+                {hasAccess &&
+                    <ActionBranchButton onClick={handleCreate}>
+                        Penyesuaian Stok Baru
+                    </ActionBranchButton>
+                }
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">

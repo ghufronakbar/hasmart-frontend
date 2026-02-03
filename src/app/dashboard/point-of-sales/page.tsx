@@ -61,6 +61,7 @@ import { Combobox } from "@/components/custom/combobox";
 import { itemService } from "@/services";
 import { useRouter } from "next/navigation";
 import { CreateMemberDialog } from "./components/create-member-dialog";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Schema (Mirrors SalesPage but streamlined) ---
 const discountSchema = z.object({
@@ -98,6 +99,9 @@ export default function PointOfSalesPage() {
     const [searchItem, setSearchItem] = useState("");
     const debouncedSearchItem = useDebounce(searchItem, 200);
     const router = useRouter()
+
+    useAccessControl([UserAccess.accessPointOfSalesRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessPointOfSalesWrite], false);
 
     // --- State ---
     const [memberVerified, setMemberVerified] = useState<Member | null>(null);
@@ -455,6 +459,7 @@ export default function PointOfSalesPage() {
     </div>
 
     if (!branch && !isBranchLoading) {
+        toast.error("Harap pilih cabang terlebih dahulu");
         router.push("/dashboard");
     }
 
@@ -743,14 +748,16 @@ export default function PointOfSalesPage() {
                         />
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button
-                                    className="w-full h-12 text-lg font-bold shadow-md"
-                                    size="lg"
-                                    disabled={isCreating || fields.length === 0}
-                                >
-                                    {isCreating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
-                                    BAYAR
-                                </Button>
+                                {hasAccess &&
+                                    <Button
+                                        className="w-full h-12 text-lg font-bold shadow-md"
+                                        size="lg"
+                                        disabled={isCreating || fields.length === 0}
+                                    >
+                                        {isCreating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
+                                        BAYAR
+                                    </Button>
+                                }
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>

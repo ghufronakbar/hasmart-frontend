@@ -78,6 +78,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import { DataTableToolbar } from "@/components/ui/data-table/data-table-toolbar";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Validation Schema ---
 const memberSchema = z.object({
@@ -92,6 +93,8 @@ const memberSchema = z.object({
 type MemberFormValues = z.infer<typeof memberSchema>;
 
 export default function MembersPage() {
+    useAccessControl([UserAccess.accessMasterMemberRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessMasterMemberWrite], false);
     // --- State ---
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
@@ -199,6 +202,7 @@ export default function MembersPage() {
             id: "actions",
             cell: ({ row }) => {
                 const member = row.original;
+                if (!hasAccess) return null;
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -224,7 +228,7 @@ export default function MembersPage() {
                 );
             },
         },
-    ], [handleEditClick]);
+    ], [handleEditClick, hasAccess]);
 
     // --- Table Instance ---
     const table = useReactTable({
@@ -309,9 +313,11 @@ export default function MembersPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Manajemen Member</h2>
-                <Button onClick={() => { setEditingMember(null); setIsCreateOpen(true); }}>
-                    <Plus className="mr-2 h-4 w-4" /> Tambah Member
-                </Button>
+                {hasAccess &&
+                    <Button onClick={() => { setEditingMember(null); setIsCreateOpen(true); }}>
+                        <Plus className="mr-2 h-4 w-4" /> Tambah Member
+                    </Button>
+                }
             </div>
 
             <DataTableToolbar

@@ -89,6 +89,7 @@ import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Types & Schemas ---
 
@@ -121,6 +122,8 @@ type SellReturnItemFormValues = z.infer<typeof sellReturnItemSchema>;
 
 
 export default function SellReturnPage() {
+    useAccessControl([UserAccess.accessTransactionSellReturnRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessTransactionSellReturnWrite], false);
     const { branch } = useBranch();
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
@@ -597,6 +600,7 @@ export default function SellReturnPage() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const s = row.original;
+                if (!hasAccess) return null;
                 return (
                     <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(s)}>
@@ -611,7 +615,7 @@ export default function SellReturnPage() {
                 );
             },
         },
-    ], []);
+    ], [hasAccess]);
 
     const table = useReactTable({
         data: sellReturnData?.data || [],
@@ -635,9 +639,11 @@ export default function SellReturnPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Retur Penjualan (B2B)</h2>
-                <ActionBranchButton onClick={() => handleOpenChange(true)}>
-                    Retur Penjualan Baru
-                </ActionBranchButton>
+                {hasAccess && (
+                    <ActionBranchButton onClick={() => handleOpenChange(true)}>
+                        Retur Penjualan Baru
+                    </ActionBranchButton>
+                )}
             </div>
 
             {/* Toolbar */}

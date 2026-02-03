@@ -8,6 +8,7 @@ import {
   ResetPasswordDTO,
   EditProfileDTO,
   ChangePasswordDTO,
+  UpdateUserAccessDTO,
 } from "@/types/app/user";
 import { FilterQuery } from "@/types/common";
 
@@ -75,6 +76,18 @@ export function useUpdateProfile() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: (data: ChangePasswordDTO) => userService.changePassword(data),
+  });
+}
+
+export function useUpdateUserAccess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateUserAccessDTO }) =>
+      userService.updateAccess(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.app.user.all });
+    },
   });
 }
 

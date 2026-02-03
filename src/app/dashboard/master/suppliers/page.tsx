@@ -70,6 +70,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import { DataTableToolbar } from "@/components/ui/data-table/data-table-toolbar";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Validation Schema ---
 const supplierSchema = z.object({
@@ -83,6 +84,8 @@ const supplierSchema = z.object({
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
 export default function SuppliersPage() {
+    useAccessControl([UserAccess.accessMasterSupplierRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessMasterSupplierWrite], false);
     // --- State ---
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
@@ -186,6 +189,7 @@ export default function SuppliersPage() {
             id: "actions",
             cell: ({ row }) => {
                 const supplier = row.original;
+                if (!hasAccess) return null;
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -211,7 +215,7 @@ export default function SuppliersPage() {
                 );
             },
         },
-    ], [handleEditClick]);
+    ], [handleEditClick, hasAccess]);
 
     // --- Table Instance ---
     const table = useReactTable({
@@ -295,9 +299,11 @@ export default function SuppliersPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Manajemen Supplier</h2>
-                <Button onClick={() => { setEditingSupplier(null); setIsCreateOpen(true); }}>
-                    <Plus className="mr-2 h-4 w-4" /> Tambah Supplier
-                </Button>
+                {hasAccess &&
+                    <Button onClick={() => { setEditingSupplier(null); setIsCreateOpen(true); }}>
+                        <Plus className="mr-2 h-4 w-4" /> Tambah Supplier
+                    </Button>
+                }
             </div>
 
             <DataTableToolbar

@@ -81,6 +81,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 
 import { Combobox } from "@/components/custom/combobox";
 import { AxiosError } from "axios";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Validation Schemas ---
 
@@ -126,6 +127,8 @@ type CreateItemFormValues = z.infer<typeof createItemSchema>;
 
 
 export default function ItemsPage() {
+    useAccessControl([UserAccess.accessMasterItemRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessMasterItemWrite], false);
     // --- State ---
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
@@ -191,6 +194,8 @@ export default function ItemsPage() {
         control: unifiedForm.control,
         name: "masterItemVariants",
     });
+
+
 
 
 
@@ -424,9 +429,11 @@ export default function ItemsPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Manajemen Item</h2>
-                <Button onClick={handleOpenCreate}>
-                    <Plus className="mr-2 h-4 w-4" /> Tambah Item
-                </Button>
+                {hasAccess &&
+                    <Button onClick={handleOpenCreate}>
+                        <Plus className="mr-2 h-4 w-4" /> Tambah Item
+                    </Button>
+                }
             </div>
 
             {/* Filter */}
@@ -554,7 +561,7 @@ export default function ItemsPage() {
                                             {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(variant.sellPrice))}
                                         </TableCell>
 
-                                        {index === 0 && (
+                                        {index === 0 && hasAccess && (
                                             <TableCell rowSpan={rowSpan} className="align-top text-right border-l">
                                                 <div className="flex flex-col gap-1 items-end">
                                                     <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(item)}>

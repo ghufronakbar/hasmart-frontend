@@ -9,7 +9,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
-import { useState, createContext } from "react";
+import { useState, createContext, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Tooltip,
@@ -18,6 +18,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { menuItems, MenuItem } from "@/constants/menu-items";
+import { useProfile } from "@/hooks/app/use-user";
 
 // Context to share sidebar state if needed, though props could work too
 const SidebarContext = createContext<{ isExpanded: boolean }>({ isExpanded: true });
@@ -26,7 +27,20 @@ export function Sidebar() {
     const pathname = usePathname();
     const [isExpanded, setIsExpanded] = useState(true);
 
+    const { data: user } = useProfile()
+
     const toggleSidebar = () => setIsExpanded(!isExpanded);
+
+    const filteredMenuItems: MenuItem[] = useMemo(() => {
+        if (!user) return []
+        return menuItems.filter((item) => {
+            if (!item.access) return true
+            if (item.children) {
+                return item.children.some((child) => user[child.access?.toString() as keyof typeof user])
+            }
+            return user[item.access.toString() as keyof typeof user]
+        })
+    }, [user])
 
     return (
         <TooltipProvider>
@@ -60,7 +74,7 @@ export function Sidebar() {
                 <div className="flex-1 overflow-y-auto overflow-x-hidden py-2">
                     <nav className="grid items-start px-2 text-sm font-medium lg:px-2 gap-1">
                         <SidebarContext.Provider value={{ isExpanded }}>
-                            {menuItems.map((item, index) => (
+                            {filteredMenuItems.map((item, index) => (
                                 <SidebarItem key={index} item={item} pathname={pathname} isExpanded={isExpanded} />
                             ))}
                         </SidebarContext.Provider>

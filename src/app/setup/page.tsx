@@ -85,7 +85,7 @@ export default function SetupPage() {
 
                     toast.success("Akun admin berhasil dibuat!");
                     await sleep(1000);
-                    router.push("/dashboard/overview");
+                    router.push("/dashboard/profile");
                 },
                 onError: (error: unknown) => {
                     const err = error as { response?: { data?: { errors?: { message?: string } } } };

@@ -7,6 +7,42 @@ export interface User {
   isSuperUser: boolean;
   createdAt: string;
   updatedAt: string;
+
+  // access
+  accessOverviewRead: boolean;
+  accessPointOfSalesRead: boolean;
+  accessPointOfSalesWrite: boolean;
+  accessAppUserRead: boolean;
+  accessAppUserWrite: boolean;
+  accessAppBranchWrite: boolean;
+  accessMasterItemRead: boolean;
+  accessMasterItemWrite: boolean;
+  accessMasterItemCategoryRead: boolean;
+  accessMasterItemCategoryWrite: boolean;
+  accessMasterMemberRead: boolean;
+  accessMasterMemberWrite: boolean;
+  accessMasterMemberCategoryRead: boolean;
+  accessMasterMemberCategoryWrite: boolean;
+  accessMasterSupplierRead: boolean;
+  accessMasterSupplierWrite: boolean;
+  accessMasterUnitRead: boolean;
+  accessMasterUnitWrite: boolean;
+  accessTransactionPurchaseRead: boolean;
+  accessTransactionPurchaseWrite: boolean;
+  accessTransactionPurchaseReturnRead: boolean;
+  accessTransactionPurchaseReturnWrite: boolean;
+  accessTransactionSalesRead: boolean;
+  accessTransactionSalesWrite: boolean;
+  accessTransactionSalesReturnRead: boolean;
+  accessTransactionSalesReturnWrite: boolean;
+  accessTransactionSellRead: boolean;
+  accessTransactionSellWrite: boolean;
+  accessTransactionSellReturnRead: boolean;
+  accessTransactionSellReturnWrite: boolean;
+  accessTransactionTransferRead: boolean;
+  accessTransactionTransferWrite: boolean;
+  accessTransactionAdjustmentRead: boolean;
+  accessTransactionAdjustmentWrite: boolean;
 }
 
 export interface LoginDTO {
@@ -18,6 +54,79 @@ export interface CreateUserDTO {
   name: string;
   password?: string;
   isActive: boolean;
+
+  // access
+  accessOverviewRead?: boolean;
+  accessPointOfSalesRead?: boolean;
+  accessPointOfSalesWrite?: boolean;
+  accessAppUserRead?: boolean;
+  accessAppUserWrite?: boolean;
+  accessAppBranchWrite?: boolean;
+  accessMasterItemRead?: boolean;
+  accessMasterItemWrite?: boolean;
+  accessMasterItemCategoryRead?: boolean;
+  accessMasterItemCategoryWrite?: boolean;
+  accessMasterMemberRead?: boolean;
+  accessMasterMemberWrite?: boolean;
+  accessMasterMemberCategoryRead?: boolean;
+  accessMasterMemberCategoryWrite?: boolean;
+  accessMasterSupplierRead?: boolean;
+  accessMasterSupplierWrite?: boolean;
+  accessMasterUnitRead?: boolean;
+  accessMasterUnitWrite?: boolean;
+  accessTransactionPurchaseRead?: boolean;
+  accessTransactionPurchaseWrite?: boolean;
+  accessTransactionPurchaseReturnRead?: boolean;
+  accessTransactionPurchaseReturnWrite?: boolean;
+  accessTransactionSalesRead?: boolean;
+  accessTransactionSalesWrite?: boolean;
+  accessTransactionSalesReturnRead?: boolean;
+  accessTransactionSalesReturnWrite?: boolean;
+  accessTransactionSellRead?: boolean;
+  accessTransactionSellWrite?: boolean;
+  accessTransactionSellReturnRead?: boolean;
+  accessTransactionSellReturnWrite?: boolean;
+  accessTransactionTransferRead?: boolean;
+  accessTransactionTransferWrite?: boolean;
+  accessTransactionAdjustmentRead?: boolean;
+  accessTransactionAdjustmentWrite?: boolean;
+}
+
+export interface UpdateUserAccessDTO {
+  accessOverviewRead: boolean;
+  accessPointOfSalesRead: boolean;
+  accessPointOfSalesWrite: boolean;
+  accessAppUserRead: boolean;
+  accessAppUserWrite: boolean;
+  accessAppBranchWrite: boolean;
+  accessMasterItemRead: boolean;
+  accessMasterItemWrite: boolean;
+  accessMasterItemCategoryRead: boolean;
+  accessMasterItemCategoryWrite: boolean;
+  accessMasterMemberRead: boolean;
+  accessMasterMemberWrite: boolean;
+  accessMasterMemberCategoryRead: boolean;
+  accessMasterMemberCategoryWrite: boolean;
+  accessMasterSupplierRead: boolean;
+  accessMasterSupplierWrite: boolean;
+  accessMasterUnitRead: boolean;
+  accessMasterUnitWrite: boolean;
+  accessTransactionPurchaseRead: boolean;
+  accessTransactionPurchaseWrite: boolean;
+  accessTransactionPurchaseReturnRead: boolean;
+  accessTransactionPurchaseReturnWrite: boolean;
+  accessTransactionSalesRead: boolean;
+  accessTransactionSalesWrite: boolean;
+  accessTransactionSalesReturnRead: boolean;
+  accessTransactionSalesReturnWrite: boolean;
+  accessTransactionSellRead: boolean;
+  accessTransactionSellWrite: boolean;
+  accessTransactionSellReturnRead: boolean;
+  accessTransactionSellReturnWrite: boolean;
+  accessTransactionTransferRead: boolean;
+  accessTransactionTransferWrite: boolean;
+  accessTransactionAdjustmentRead: boolean;
+  accessTransactionAdjustmentWrite: boolean;
 }
 
 export interface ResetPasswordDTO {

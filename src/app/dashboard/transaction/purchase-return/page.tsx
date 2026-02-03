@@ -115,6 +115,7 @@ import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 type CreatePurchaseReturnFormValues = z.infer<typeof createPurchaseReturnSchema>;
 type PurchaseReturnItemFormValues = z.infer<typeof purchaseReturnItemSchema>;
@@ -123,6 +124,8 @@ type PurchaseReturnItemFormValues = z.infer<typeof purchaseReturnItemSchema>;
 
 
 export default function PurchaseReturnPage() {
+    useAccessControl([UserAccess.accessTransactionPurchaseReturnRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessTransactionPurchaseReturnWrite], false);
     const { branch } = useBranch();
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [searchTerm, setSearchTerm] = useState("");
@@ -568,6 +571,7 @@ export default function PurchaseReturnPage() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cell: ({ row }: any) => {
                 const p = row.original;
+                if (!hasAccess) return null;
                 return (
                     <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(p)}>
@@ -582,7 +586,7 @@ export default function PurchaseReturnPage() {
                 );
             },
         },
-    ], []);
+    ], [hasAccess]);
 
     const table = useReactTable({
         data: purchaseReturnData?.data || [],
@@ -606,9 +610,11 @@ export default function PurchaseReturnPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Retur Pembelian</h2>
-                <ActionBranchButton onClick={() => handleOpenChange(true)}>
-                    Retur Baru
-                </ActionBranchButton>
+                {hasAccess &&
+                    <ActionBranchButton onClick={() => handleOpenChange(true)}>
+                        Retur Baru
+                    </ActionBranchButton>
+                }
             </div>
 
             {/* Toolbar */}

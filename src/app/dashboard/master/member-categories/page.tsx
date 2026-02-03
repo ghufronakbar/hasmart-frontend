@@ -70,6 +70,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import { DataTableToolbar } from "@/components/ui/data-table/data-table-toolbar";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Validation Schema ---
 const memberCategorySchema = z.object({
@@ -84,6 +85,8 @@ const memberCategorySchema = z.object({
 type MemberCategoryFormValues = z.infer<typeof memberCategorySchema>;
 
 export default function MemberCategoriesPage() {
+    useAccessControl([UserAccess.accessMasterMemberCategoryRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessMasterMemberCategoryWrite], false);
     // --- State ---
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
@@ -190,6 +193,7 @@ export default function MemberCategoriesPage() {
             id: "actions",
             cell: ({ row }) => {
                 const category = row.original;
+                if (!hasAccess) return null;
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -297,9 +301,11 @@ export default function MemberCategoriesPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Kategori Member</h2>
-                <Button onClick={() => { setEditingCategory(null); setIsCreateOpen(true); }}>
-                    <Plus className="mr-2 h-4 w-4" /> Tambah Kategori
-                </Button>
+                {hasAccess &&
+                    <Button onClick={() => { setEditingCategory(null); setIsCreateOpen(true); }}>
+                        <Plus className="mr-2 h-4 w-4" /> Tambah Kategori
+                    </Button>
+                }
             </div>
 
             <DataTableToolbar

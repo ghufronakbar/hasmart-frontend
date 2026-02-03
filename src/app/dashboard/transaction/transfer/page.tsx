@@ -92,6 +92,7 @@ import {
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 // --- Schema ---
 const createTransferItemSchema = z.object({
@@ -115,6 +116,8 @@ type CreateTransferFormValues = z.infer<typeof createTransferSchema>;
 
 
 export default function TransferPage() {
+    useAccessControl([UserAccess.accessTransactionTransferRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessTransactionTransferWrite], false);
     // Context
     const { branch } = useBranchContext();
 
@@ -361,16 +364,19 @@ export default function TransferPage() {
         },
         {
             id: "actions",
-            cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleViewDetail(row.original.id)}>
-                        <Eye className="h-4 w-4 text-blue-500" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(row.original.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                </div>
-            ),
+            cell: ({ row }) => {
+                if (!hasAccess) return null;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleViewDetail(row.original.id)}>
+                            <Eye className="h-4 w-4 text-blue-500" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(row.original.id)}>
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                    </div>
+                )
+            }
         },
     ];
 
@@ -396,9 +402,11 @@ export default function TransferPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Transfer Stok</h2>
-                <ActionBranchButton onClick={handleCreate}>
-                    Transfer Baru
-                </ActionBranchButton>
+                {hasAccess && (
+                    <ActionBranchButton onClick={handleCreate}>
+                        Transfer Baru
+                    </ActionBranchButton>
+                )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
