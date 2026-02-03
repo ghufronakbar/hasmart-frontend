@@ -331,7 +331,6 @@ export default function SalesReturnPage() {
             }));
 
             form.setValue("items", newItems || []);
-            toast.success("Invoice ditemukan");
             setSearchInvoiceQuery("");
         }
     }, [salesInvoiceData, editingId, form, searchInvoiceQuery]);

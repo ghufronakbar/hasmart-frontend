@@ -655,9 +655,6 @@ export default function PurchaseReturnPage() {
                                     {editingId ? "Perbarui informasi retur pembelian di bawah ini." : "Input detail retur barang ke supplier."}
                                 </DialogDescription>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={() => setIsCreateOpen(false)}>
-                                <X className="h-4 w-4" />
-                            </Button>
                         </div>
                     </DialogHeader>
 
