@@ -124,7 +124,10 @@ export default function SellReturnPage() {
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
     const [searchTerm, setSearchTerm] = useState("");
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -225,7 +228,7 @@ export default function SellReturnPage() {
             setIsInvoiceVerified(true);
             form.setValue("originalInvoiceNumber", invoice.invoiceNumber);
             form.setValue("branchId", invoice.branchId);
-            form.setValue("taxPercentage", invoice.taxPercentage ?? 0);
+            form.setValue("taxPercentage", parseFloat(String(invoice.taxPercentage ?? 0)));
             form.setValue("memberCode", invoice.memberCode || invoice.masterMember?.code || "");
 
             // Set Member Verified
@@ -241,9 +244,9 @@ export default function SellReturnPage() {
                 qty: item.qty, // Default to full return? Let's assume so or 1? 
                 // User said "mengisi form, pengguna wajib ... ambil data response masukkan sebagai default value"
                 // It's safer to pre-fill with bought quantity. User can decrease it.
-                sellPrice: item.sellPrice || 0,
+                sellPrice: parseFloat(String(item.sellPrice || 0)),
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                discounts: (item.discounts || []).map((d: any) => ({ percentage: d.percentage })),
+                discounts: (item.discounts || []).map((d: any) => ({ percentage: parseFloat(d.percentage) })),
             }));
 
             form.setValue("items", mappedItems);
@@ -470,9 +473,9 @@ export default function SellReturnPage() {
                     masterItemId: item.masterItemId,
                     masterItemVariantId: item.masterItemVariantId,
                     qty: item.qty,
-                    sellPrice: item.sellPrice || 0,
+                    sellPrice: parseFloat(String(item.sellPrice || 0)),
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    discounts: item.discounts?.map((d: any) => ({ percentage: d.percentage })) || []
+                    discounts: item.discounts?.map((d: any) => ({ percentage: parseFloat(d.percentage) })) || []
                 }))
             };
             form.reset(formDataVal);
@@ -505,7 +508,7 @@ export default function SellReturnPage() {
         const item = items?.data?.find(i => i.id === itemId);
         const variant = item?.masterItemVariants?.find(v => v.id === variantId);
         if (variant && variant.sellPrice) {
-            form.setValue(`items.${index}.sellPrice`, variant.sellPrice);
+            form.setValue(`items.${index}.sellPrice`, parseFloat(variant.sellPrice));
         }
     };
 
@@ -575,7 +578,7 @@ export default function SellReturnPage() {
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(row.original.recordedTotalAmount))}</div>,
         },
         {
             accessorKey: "notes",

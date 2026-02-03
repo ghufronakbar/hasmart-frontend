@@ -260,7 +260,7 @@ export default function ItemsPage() {
                 id: v.id,
                 unit: v.unit,
                 amount: v.amount,
-                sellPrice: v.sellPrice,
+                sellPrice: parseFloat(v.sellPrice), // Parse string from API to number for form
                 isBaseUnit: v.isBaseUnit,
             })) || [],
         });
@@ -336,7 +336,7 @@ export default function ItemsPage() {
                         const hasChanged = !original ||
                             original.unit !== variant.unit ||
                             original.amount !== variant.amount ||
-                            original.sellPrice !== variant.sellPrice;
+                            original.sellPrice !== String(variant.sellPrice);
 
                         if (hasChanged) {
                             promises.push(new Promise((resolve, reject) => {
@@ -508,7 +508,7 @@ export default function ItemsPage() {
                                                     ) : "-"}
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
-                                                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(item.recordedBuyPrice)}
+                                                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(item.recordedBuyPrice))}
                                                 </TableCell>
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
                                                     {item.stock}
@@ -522,10 +522,10 @@ export default function ItemsPage() {
                                         <TableCell>{variant.unit}</TableCell>
                                         <TableCell>{variant.amount}</TableCell>
                                         <TableCell>
-                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(variant.recordedProfitAmount)} ({variant.recordedProfitPercentage}%)
+                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(variant.recordedProfitAmount))} ({variant.recordedProfitPercentage}%)
                                         </TableCell>
                                         <TableCell>
-                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(variant.sellPrice)}
+                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(variant.sellPrice))}
                                         </TableCell>
 
                                         {index === 0 && (

@@ -128,7 +128,10 @@ export default function TransferPage() {
 
     // List State
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);

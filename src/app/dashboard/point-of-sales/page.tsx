@@ -110,7 +110,8 @@ export default function PointOfSalesPage() {
         limit: 20,
         search: debouncedSearchItem,
         sortBy: "name",
-        sort: "asc"
+        sort: "asc",
+        onlyActive: true,
     });
 
     const itemsList = items?.data || [];
@@ -215,7 +216,7 @@ export default function PointOfSalesPage() {
                 masterItemId: item.id,
                 masterItemVariantId: defaultVariant.id,
                 qty: 1,
-                salesPrice: defaultVariant.sellPrice,
+                salesPrice: parseFloat(defaultVariant.sellPrice),
                 discounts: [],
                 name: item.name,
                 variantName: `${defaultVariant.unit} (${defaultVariant.amount})`,
@@ -251,6 +252,11 @@ export default function PointOfSalesPage() {
                         return;
                     }
 
+                    if (!item.isActive) {
+                        toast.error("Item tidak aktif");
+                        return;
+                    }
+
                     // Get base unit variant (amount === 1) or first variant
                     const baseVariant = item.masterItemVariants.find(v => v.isBaseUnit)
                         || item.masterItemVariants[0];
@@ -278,7 +284,7 @@ export default function PointOfSalesPage() {
                             masterItemId: item.id,
                             masterItemVariantId: baseVariant.id,
                             qty: 1,
-                            salesPrice: baseVariant.sellPrice,
+                            salesPrice: parseFloat(baseVariant.sellPrice),
                             discounts: [],
                             name: item.name,
                             variantName: `${baseVariant.unit} (${baseVariant.amount})`,
@@ -294,7 +300,7 @@ export default function PointOfSalesPage() {
                 }
             } catch (error) {
                 console.error(error);
-                toast.error("Gagal mencari item");
+                toast.error("Kode tidak ditemukan");
             } finally {
                 setIsScanning(false);
                 // Keep focus
@@ -316,7 +322,7 @@ export default function PointOfSalesPage() {
                 variantName: `${newVariant.unit} (${newVariant.amount})`,
                 unit: newVariant.unit,
                 amount: newVariant.amount,
-                salesPrice: newVariant.sellPrice
+                salesPrice: parseFloat(newVariant.sellPrice)
             });
         }
     };

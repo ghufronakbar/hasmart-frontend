@@ -8,14 +8,14 @@ export interface SalesItem {
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
-  salesPrice: number;
-  recordedTotalAmount: number;
+  salesPrice: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
   transactionSalesDiscounts?: {
     id: number;
-    percentage: number;
-    recordedAmount: number;
+    percentage: string; // Decimal from backend
+    recordedAmount: string; // Decimal from backend
   }[];
   createdAt: string;
   updatedAt: string;
@@ -29,7 +29,7 @@ export interface Sales {
   memberCode?: string | null;
   masterMemberId?: number | null;
   notes?: string | null;
-  recordedTotalAmount: number;
+  recordedTotalAmount: string; // Decimal from backend
   masterMember?: Member;
   transactionSalesItems?: SalesItem[]; // Backend relation name
   createdAt: string;

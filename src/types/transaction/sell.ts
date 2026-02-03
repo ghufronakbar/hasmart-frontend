@@ -8,11 +8,11 @@ export interface SellItem {
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
-  sellPrice: number;
-  recordedTotalAmount: number;
+  sellPrice: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
-  discounts?: { percentage: number }[];
+  discounts?: { percentage: string }[]; // Decimal from backend
   createdAt: string;
   updatedAt: string;
 }
@@ -26,10 +26,10 @@ export interface Sell {
   memberCode: string; // Mandatory
   masterMemberId: number;
   notes?: string | null;
-  taxPercentage: number;
-  recordedTaxPercentage?: number;
-  recordedTaxAmount: number;
-  recordedTotalAmount: number;
+  taxPercentage: string; // Decimal from backend
+  recordedTaxPercentage?: string; // Decimal from backend
+  recordedTaxAmount: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterMember?: Member;
   items: SellItem[];
   // Backend response might include this for mapping

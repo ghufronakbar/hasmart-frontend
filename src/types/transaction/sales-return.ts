@@ -8,14 +8,14 @@ export interface SalesReturnItem {
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
-  salesPrice: number;
-  recordedTotalAmount: number;
+  salesPrice: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
   transactionSalesReturnDiscounts?: {
     id: number;
-    percentage: number;
-    recordedAmount: number;
+    percentage: string; // Decimal from backend
+    recordedAmount: string; // Decimal from backend
   }[];
   createdAt: string;
   updatedAt: string;
@@ -26,9 +26,9 @@ export interface SalesReturn {
   returnNumber: string;
   transactionSalesId: number;
   notes?: string | null;
-  recordedSubTotalAmount: number;
-  recordedDiscountAmount: number;
-  recordedTotalAmount: number;
+  recordedSubTotalAmount: string; // Decimal from backend
+  recordedDiscountAmount: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   branchId: number;
   masterMemberId?: number | null;
   transactionSales?: {

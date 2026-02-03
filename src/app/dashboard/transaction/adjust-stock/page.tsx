@@ -121,7 +121,10 @@ export default function AdjustStockPage() {
         pageIndex: 0,
         pageSize: 10,
     });
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);

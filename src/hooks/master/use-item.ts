@@ -14,7 +14,9 @@ import { useBranch } from "@/providers/branch-provider";
 
 // --- Item Hooks ---
 
-export function useItems(params?: FilterQuery & { idNotIns?: string }) {
+export function useItems(
+  params?: FilterQuery & { idNotIns?: string; onlyActive?: boolean },
+) {
   const { branch } = useBranch();
   return useQuery({
     queryKey: queryKeys.master.items.list({ ...params, branchId: branch?.id }),

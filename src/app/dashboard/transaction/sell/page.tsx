@@ -128,7 +128,10 @@ export default function SellPage() {
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
     const [searchTerm, setSearchTerm] = useState("");
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -380,7 +383,7 @@ export default function SellPage() {
                 setMemberVerified(sell.masterMember);
             }
 
-            const taxPct = sell.recordedTaxPercentage ?? sell.taxPercentage ?? 0;
+            const taxPct = parseFloat(String(sell.recordedTaxPercentage ?? sell.taxPercentage ?? 0));
 
             const formDataVal = {
                 transactionDate: new Date(sell.transactionDate),
@@ -393,8 +396,8 @@ export default function SellPage() {
                     masterItemId: item.masterItemId,
                     masterItemVariantId: item.masterItemVariantId,
                     qty: item.qty,
-                    sellPrice: item.sellPrice || 0,
-                    discounts: item.discounts?.map(d => ({ percentage: d.percentage })) || []
+                    sellPrice: parseFloat(String(item.sellPrice || 0)),
+                    discounts: item.discounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
                 }))
             };
             form.reset(formDataVal);
@@ -424,7 +427,7 @@ export default function SellPage() {
         const item = items?.data?.find(i => i.id === itemId);
         const variant = item?.masterItemVariants?.find(v => v.id === variantId);
         if (variant && variant.sellPrice) {
-            form.setValue(`items.${index}.sellPrice`, variant.sellPrice);
+            form.setValue(`items.${index}.sellPrice`, parseFloat(variant.sellPrice));
         }
     };
 
@@ -494,7 +497,7 @@ export default function SellPage() {
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(row.original.recordedTotalAmount))}</div>,
         },
         {
             accessorKey: "notes",

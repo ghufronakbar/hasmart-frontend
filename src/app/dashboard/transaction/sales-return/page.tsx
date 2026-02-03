@@ -119,7 +119,10 @@ export default function SalesReturnPage() {
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
     const [searchTerm, setSearchTerm] = useState("");
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -232,8 +235,8 @@ export default function SalesReturnPage() {
                 masterItemId: item.masterItemId,
                 masterItemVariantId: item.masterItemVariantId,
                 qty: item.qty, // Default to sold qty
-                salesPrice: item.salesPrice, // Use original sales price
-                discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: d.percentage })) || []
+                salesPrice: parseFloat(String(item.salesPrice)), // Use original sales price
+                discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
             }));
 
             form.setValue("items", newItems || []);
@@ -320,8 +323,8 @@ export default function SalesReturnPage() {
                 masterItemId: item.masterItemId,
                 masterItemVariantId: item.masterItemVariantId,
                 qty: item.qty, // Default to sold qty
-                salesPrice: item.salesPrice, // Use original sales price
-                discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: d.percentage })) || []
+                salesPrice: parseFloat(String(item.salesPrice)), // Use original sales price
+                discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
             }));
 
             form.setValue("items", newItems || []);
@@ -477,8 +480,8 @@ export default function SalesReturnPage() {
                     masterItemId: item.masterItemId,
                     masterItemVariantId: item.masterItemVariantId,
                     qty: item.qty,
-                    salesPrice: item.salesPrice || 0,
-                    discounts: item.transactionSalesReturnDiscounts?.map(d => ({ percentage: d.percentage })) || []
+                    salesPrice: parseFloat(String(item.salesPrice || 0)),
+                    discounts: item.transactionSalesReturnDiscounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
                 }))
             };
             form.reset(formDataVal);
@@ -505,7 +508,7 @@ export default function SalesReturnPage() {
         if (variant && variant.sellPrice) {
             // Note: ItemVariant has 'sellPrice'. Is it same for Sales (Kasir)?
             // Usually yes.
-            form.setValue(`items.${index}.salesPrice`, variant.sellPrice);
+            form.setValue(`items.${index}.salesPrice`, parseFloat(variant.sellPrice));
         }
     };
 
@@ -563,7 +566,7 @@ export default function SalesReturnPage() {
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(row.original.recordedTotalAmount))}</div>,
         },
         {
             accessorKey: "notes",

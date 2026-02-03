@@ -36,7 +36,7 @@ export const purchaseReturnService = {
           discounts:
             (
               item as unknown as {
-                transactionPurchaseReturnDiscounts?: { percentage: number }[];
+                transactionPurchaseReturnDiscounts?: { percentage: string }[];
               }
             ).transactionPurchaseReturnDiscounts ||
             item.discounts ||

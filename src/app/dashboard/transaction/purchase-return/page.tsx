@@ -125,7 +125,10 @@ export default function PurchaseReturnPage() {
     const { branch } = useBranch();
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [searchTerm, setSearchTerm] = useState("");
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -220,15 +223,15 @@ export default function PurchaseReturnPage() {
             form.setValue("originalInvoiceNumber", invoice.invoiceNumber);
             form.setValue("branchId", invoice.branchId);
             form.setValue("masterSupplierId", invoice.masterSupplierId);
-            form.setValue("taxPercentage", invoice.recordedTaxPercentage ?? 0);
+            form.setValue("taxPercentage", parseFloat(String(invoice.recordedTaxPercentage ?? 0)));
 
             // Map items
             const newItems = invoice.items.map(item => ({
                 masterItemId: item.masterItemId,
                 masterItemVariantId: item.masterItemVariantId,
                 qty: item.qty, // Default to bought qty, user can reduce
-                purchasePrice: item.purchasePrice, // Use original purchase price
-                discounts: item.discounts?.map(d => ({ percentage: d.percentage })) || []
+                purchasePrice: parseFloat(item.purchasePrice), // Use original purchase price
+                discounts: item.discounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
             }));
 
             form.setValue("items", newItems);
@@ -453,8 +456,8 @@ export default function PurchaseReturnPage() {
                     masterItemId: item.masterItemId,
                     masterItemVariantId: item.masterItemVariantId,
                     qty: item.qty,
-                    purchasePrice: item.purchasePrice || 0,
-                    discounts: item.discounts?.map(d => ({ percentage: d.percentage })) || []
+                    purchasePrice: parseFloat(String(item.purchasePrice || 0)),
+                    discounts: item.discounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
                 }))
             };
             form.reset(formDataVal);
@@ -473,9 +476,9 @@ export default function PurchaseReturnPage() {
 
             // For return, we ideally want the original purchase price. 
             // If item has recordedBuyPrice, use it as default
-            const itemWithPrice = item as { recordedBuyPrice?: number };
+            const itemWithPrice = item as { recordedBuyPrice?: string };
             if (itemWithPrice.recordedBuyPrice) {
-                form.setValue(`items.${index}.purchasePrice`, itemWithPrice.recordedBuyPrice);
+                form.setValue(`items.${index}.purchasePrice`, parseFloat(itemWithPrice.recordedBuyPrice));
             }
             form.setValue(`items.${index}.discounts`, []);
         }
@@ -546,7 +549,7 @@ export default function PurchaseReturnPage() {
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(row.original.recordedTotalAmount))}</div>,
         },
         {
             accessorKey: "notes",

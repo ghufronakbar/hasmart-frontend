@@ -6,9 +6,9 @@ export interface ItemVariant {
   id: number;
   unit: string;
   amount: number;
-  sellPrice: number;
-  recordedProfitPercentage: number;
-  recordedProfitAmount: number;
+  sellPrice: string; // Decimal from backend
+  recordedProfitPercentage: string; // Decimal from backend
+  recordedProfitAmount: string; // Decimal from backend
   isBaseUnit: boolean;
   masterItemId: number;
   createdAt: string;
@@ -23,7 +23,7 @@ export interface Item {
   masterItemCategoryId: number;
   masterSupplierId: number;
   isActive: boolean;
-  recordedBuyPrice: number;
+  recordedBuyPrice: string; // Decimal from backend
   stock: number; // Global stock or branch-specific based on query
   masterItemCategory?: ItemCategory;
   masterSupplier?: Supplier;

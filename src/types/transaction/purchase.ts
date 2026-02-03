@@ -3,7 +3,7 @@ import { Item, ItemVariant } from "../master/item";
 import { Supplier } from "../master/supplier";
 
 export interface PurchaseItemDiscount {
-  percentage: number;
+  percentage: string; // Decimal from backend
 }
 
 export interface PurchaseItem {
@@ -12,8 +12,8 @@ export interface PurchaseItem {
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
-  purchasePrice: number;
-  recordedTotalAmount: number;
+  purchasePrice: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
   discounts?: PurchaseItemDiscount[];
@@ -29,10 +29,10 @@ export interface Purchase {
   masterSupplierId: number;
   branchId: number;
   notes?: string | null;
-  taxAmount: number;
-  recordedTaxAmount: number;
-  recordedTaxPercentage: number;
-  recordedTotalAmount: number;
+  taxAmount: string; // Decimal from backend
+  recordedTaxAmount: string; // Decimal from backend
+  recordedTaxPercentage: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterSupplier?: Supplier;
   items: PurchaseItem[];
   // Backend response might have items here

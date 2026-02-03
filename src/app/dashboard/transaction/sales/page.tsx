@@ -110,7 +110,10 @@ export default function SalesPage() {
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
     const [searchTerm, setSearchTerm] = useState("");
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -367,8 +370,8 @@ export default function SalesPage() {
                     masterItemId: item.masterItemId,
                     masterItemVariantId: item.masterItemVariantId,
                     qty: item.qty,
-                    salesPrice: item.salesPrice || 0,
-                    discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: d.percentage })) || []
+                    salesPrice: parseFloat(String(item.salesPrice || 0)),
+                    discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
                 }))
             };
             form.reset(formDataVal);
@@ -393,7 +396,7 @@ export default function SalesPage() {
         const item = items?.data?.find(i => i.id === itemId);
         const variant = item?.masterItemVariants?.find(v => v.id === variantId);
         if (variant && variant.sellPrice) {
-            form.setValue(`items.${index}.salesPrice`, variant.sellPrice);
+            form.setValue(`items.${index}.salesPrice`, parseFloat(variant.sellPrice));
         }
     };
 
@@ -451,7 +454,7 @@ export default function SalesPage() {
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(row.original.recordedTotalAmount))}</div>,
         },
         {
             accessorKey: "notes",

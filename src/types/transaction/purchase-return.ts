@@ -8,11 +8,11 @@ export interface PurchaseReturnItem {
   masterItemId: number;
   masterItemVariantId: number;
   qty: number;
-  purchasePrice: number;
-  recordedTotalAmount: number;
+  purchasePrice: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterItem?: Item;
   masterItemVariant?: ItemVariant;
-  discounts?: { percentage: number }[];
+  discounts?: { percentage: string }[]; // Decimal from backend
   createdAt: string;
   updatedAt: string;
 }
@@ -25,10 +25,10 @@ export interface PurchaseReturn {
   masterSupplierId: number;
   branchId: number;
   notes?: string | null;
-  taxAmount: number; // Keep for legacy/compat
-  recordedTaxAmount: number;
-  recordedTaxPercentage: number;
-  recordedTotalAmount: number;
+  taxAmount: string; // Decimal from backend
+  recordedTaxAmount: string; // Decimal from backend
+  recordedTaxPercentage: string; // Decimal from backend
+  recordedTotalAmount: string; // Decimal from backend
   masterSupplier?: Supplier;
   items: PurchaseReturnItem[];
   // Backend response might have items here

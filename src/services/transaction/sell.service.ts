@@ -32,7 +32,7 @@ export const sellService = {
           discounts:
             (
               item as unknown as {
-                transactionSellDiscounts?: { percentage: number }[];
+                transactionSellDiscounts?: { percentage: string }[];
               }
             ).transactionSellDiscounts ||
             item.discounts ||
@@ -58,7 +58,7 @@ export const sellService = {
           discounts:
             (
               item as unknown as {
-                transactionSellDiscounts?: { percentage: number }[];
+                transactionSellDiscounts?: { percentage: string }[];
               }
             ).transactionSellDiscounts ||
             item.discounts ||

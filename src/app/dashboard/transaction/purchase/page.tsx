@@ -127,7 +127,10 @@ export default function PurchasePage() {
     const { branch } = useBranch();
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [searchTerm, setSearchTerm] = useState("");
-    const [sorting, setSorting] = useState<SortingState>([]);
+    const [sorting, setSorting] = useState<SortingState>([{
+        id: "transactionDate",
+        desc: true,
+    }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -369,13 +372,13 @@ export default function PurchasePage() {
             // Use safe access just in case, though detail should have items
             const currentItems = purchase.items || [];
 
-            const itemsTotal = currentItems.reduce((acc, item) => acc + (item.qty * (item.purchasePrice || 0)), 0);
+            const itemsTotal = currentItems.reduce((acc, item) => acc + (item.qty * (parseFloat(String(item.purchasePrice)) || 0)), 0);
             const discountTotal = currentItems.reduce((acc, item) => {
-                const itemTotal = item.qty * (item.purchasePrice || 0);
+                const itemTotal = item.qty * (parseFloat(String(item.purchasePrice)) || 0);
                 let currentDisc = 0;
                 let currentTotal = itemTotal;
                 item.discounts?.forEach(d => {
-                    const amount = currentTotal * (d.percentage / 100);
+                    const amount = currentTotal * (parseFloat(d.percentage) / 100);
                     currentDisc += amount;
                     currentTotal -= amount;
                 });
@@ -388,7 +391,7 @@ export default function PurchasePage() {
             const taxable = itemsTotal - discountTotal;
             // Use recordedTaxPercentage directly if available
             // If not (legacy), try to calc from amount
-            const taxPct = purchase.recordedTaxPercentage ?? (taxable > 0 ? (purchase.recordedTaxAmount / taxable) * 100 : 0);
+            const taxPct = parseFloat(String(purchase.recordedTaxPercentage ?? 0)) || (taxable > 0 ? (parseFloat(purchase.recordedTaxAmount) / taxable) * 100 : 0);
 
             console.log("DEBUG: setting taxPercentage to", taxPct);
 
@@ -405,8 +408,8 @@ export default function PurchasePage() {
                     masterItemId: item.masterItemId,
                     masterItemVariantId: item.masterItemVariantId,
                     qty: item.qty,
-                    purchasePrice: item.purchasePrice || 0,
-                    discounts: item.discounts?.map(d => ({ percentage: d.percentage })) || []
+                    purchasePrice: parseFloat(String(item.purchasePrice || 0)),
+                    discounts: item.discounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
                 }))
             };
             console.log("DEBUG: form reset with", formDataVal);
@@ -422,9 +425,9 @@ export default function PurchasePage() {
             form.setValue(`items.${index}.masterItemId`, itemId);
             form.setValue(`items.${index}.masterItemVariantId`, 0); // Reset variant
             form.setValue(`items.${index}.purchasePrice`, 0);
-            const itemWithPrice = item as { recordedBuyPrice?: number };
+            const itemWithPrice = item as { recordedBuyPrice?: string };
             if (itemWithPrice.recordedBuyPrice) {
-                form.setValue(`items.${index}.purchasePrice`, itemWithPrice.recordedBuyPrice);
+                form.setValue(`items.${index}.purchasePrice`, parseFloat(itemWithPrice.recordedBuyPrice));
             }
             form.setValue(`items.${index}.discounts`, []);
         }
@@ -495,7 +498,7 @@ export default function PurchasePage() {
                 <DataTableColumnHeader column={column} title="Total" className="text-right" />
             ),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(row.original.recordedTotalAmount)}</div>,
+            cell: ({ row }: any) => <div className="text-right font-bold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(row.original.recordedTotalAmount))}</div>,
         },
         {
             accessorKey: "notes",
