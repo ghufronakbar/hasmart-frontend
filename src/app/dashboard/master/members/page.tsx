@@ -357,7 +357,7 @@ export default function MembersPage() {
                                     control={form.control}
                                     name="masterMemberCategoryId"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="w-full">
                                             <FormLabel>Kategori Member (Wajib)</FormLabel>
                                             <Select
                                                 onValueChange={field.onChange}
@@ -365,7 +365,7 @@ export default function MembersPage() {
                                                 value={field.value ? field.value.toString() : undefined}
                                             >
                                                 <FormControl>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="w-full">
                                                         <SelectValue placeholder="Pilih kategori" />
                                                     </SelectTrigger>
                                                 </FormControl>
