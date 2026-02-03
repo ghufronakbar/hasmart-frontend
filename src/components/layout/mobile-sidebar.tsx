@@ -1,13 +1,14 @@
 "use client";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { menuItems } from "@/constants/menu-items";
+import { MenuItem, menuItems } from "@/constants/menu-items";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronRight } from "lucide-react";
+import { useProfile } from "@/hooks/app/use-user";
 
 interface MobileSidebarProps {
     open: boolean;
@@ -17,6 +18,39 @@ interface MobileSidebarProps {
 export function MobileSidebar({ open, setOpen }: MobileSidebarProps) {
     const pathname = usePathname();
 
+    const { data: userResponse } = useProfile()
+    const user = userResponse?.data
+    const filteredMenuItems: MenuItem[] = useMemo(() => {
+        if (!user) return [];;
+
+        const filterRecursive = (items: MenuItem[]): MenuItem[] => {
+            return items.reduce((acc, item) => {
+                // 1. Check direct access permission if defined
+                const hasPermission = !item.access || user[item.access.toString() as keyof typeof user];
+
+                // If user doesn't have direct access, skip immediately
+                if (!hasPermission) return acc;
+
+                // 2. Handle Children (Recursive)
+                if (item.children) {
+                    const filteredChildren = filterRecursive(item.children);
+
+                    // Only include parent if it has visible children
+                    if (filteredChildren.length > 0) {
+                        acc.push({ ...item, children: filteredChildren });
+                    }
+                } else {
+                    // No children, and hasPermission is true -> Include item
+                    acc.push(item);
+                }
+
+                return acc;
+            }, [] as MenuItem[]);
+        };
+
+        return filterRecursive(menuItems);
+    }, [user]);
+
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0">
@@ -25,7 +59,7 @@ export function MobileSidebar({ open, setOpen }: MobileSidebarProps) {
                 </SheetHeader>
                 <div className="flex-1 overflow-auto py-4">
                     <nav className="grid items-start px-2 text-sm font-medium">
-                        {menuItems.map((item, index) => (
+                        {filteredMenuItems.map((item, index) => (
                             <MobileSidebarItem
                                 key={index}
                                 item={item}

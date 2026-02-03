@@ -27,20 +27,41 @@ export function Sidebar() {
     const pathname = usePathname();
     const [isExpanded, setIsExpanded] = useState(true);
 
-    const { data: user } = useProfile()
+    const { data: userResponse } = useProfile()
+    const user = userResponse?.data
 
     const toggleSidebar = () => setIsExpanded(!isExpanded);
 
     const filteredMenuItems: MenuItem[] = useMemo(() => {
-        if (!user) return []
-        return menuItems.filter((item) => {
-            if (!item.access) return true
-            if (item.children) {
-                return item.children.some((child) => user[child.access?.toString() as keyof typeof user])
-            }
-            return user[item.access.toString() as keyof typeof user]
-        })
-    }, [user])
+        if (!user) return [];;
+
+        const filterRecursive = (items: MenuItem[]): MenuItem[] => {
+            return items.reduce((acc, item) => {
+                // 1. Check direct access permission if defined
+                const hasPermission = !item.access || user[item.access.toString() as keyof typeof user];
+
+                // If user doesn't have direct access, skip immediately
+                if (!hasPermission) return acc;
+
+                // 2. Handle Children (Recursive)
+                if (item.children) {
+                    const filteredChildren = filterRecursive(item.children);
+
+                    // Only include parent if it has visible children
+                    if (filteredChildren.length > 0) {
+                        acc.push({ ...item, children: filteredChildren });
+                    }
+                } else {
+                    // No children, and hasPermission is true -> Include item
+                    acc.push(item);
+                }
+
+                return acc;
+            }, [] as MenuItem[]);
+        };
+
+        return filterRecursive(menuItems);
+    }, [user]);
 
     return (
         <TooltipProvider>

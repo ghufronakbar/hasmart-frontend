@@ -514,7 +514,7 @@ export default function SalesPage() {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Daftar Penjualan</h2>
+                <h2 className="text-2xl font-bold tracking-tight">Penjualan Kasir</h2>
                 {hasAccess && (
                     <ActionBranchButton onClick={() => handleOpenChange(true)}>
                         Penjualan Baru

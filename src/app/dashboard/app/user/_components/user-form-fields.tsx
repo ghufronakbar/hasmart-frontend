@@ -218,14 +218,14 @@ export function UserFormFields({ mode, form }: UserFormFieldsProps) {
                         <AccessCheckbox form={form} name="accessTransactionPurchaseWrite" label="Kelola Pembelian" />
                         <AccessCheckbox form={form} name="accessTransactionPurchaseReturnRead" label="Lihat Retur Pembelian" />
                         <AccessCheckbox form={form} name="accessTransactionPurchaseReturnWrite" label="Kelola Retur Pembelian" />
-                        <AccessCheckbox form={form} name="accessTransactionSalesRead" label="Lihat Penjualan" />
-                        <AccessCheckbox form={form} name="accessTransactionSalesWrite" label="Kelola Penjualan" />
-                        <AccessCheckbox form={form} name="accessTransactionSalesReturnRead" label="Lihat Retur Penjualan" />
-                        <AccessCheckbox form={form} name="accessTransactionSalesReturnWrite" label="Kelola Retur Penjualan" />
-                        <AccessCheckbox form={form} name="accessTransactionSellRead" label="Lihat Kasir" />
-                        <AccessCheckbox form={form} name="accessTransactionSellWrite" label="Kelola Kasir" />
-                        <AccessCheckbox form={form} name="accessTransactionSellReturnRead" label="Lihat Retur Kasir" />
-                        <AccessCheckbox form={form} name="accessTransactionSellReturnWrite" label="Kelola Retur Kasir" />
+                        <AccessCheckbox form={form} name="accessTransactionSalesRead" label="Lihat Kasir" />
+                        <AccessCheckbox form={form} name="accessTransactionSalesWrite" label="Kelola Kasir" />
+                        <AccessCheckbox form={form} name="accessTransactionSalesReturnRead" label="Lihat Retur Kasir" />
+                        <AccessCheckbox form={form} name="accessTransactionSalesReturnWrite" label="Kelola Retur Kasir" />
+                        <AccessCheckbox form={form} name="accessTransactionSellRead" label="Lihat Penjualan" />
+                        <AccessCheckbox form={form} name="accessTransactionSellWrite" label="Kelola Penjualan" />
+                        <AccessCheckbox form={form} name="accessTransactionSellReturnRead" label="Lihat Retur Penjualan" />
+                        <AccessCheckbox form={form} name="accessTransactionSellReturnWrite" label="Kelola Retur Penjualan" />
                         <AccessCheckbox form={form} name="accessTransactionTransferRead" label="Lihat Transfer Stok" />
                         <AccessCheckbox form={form} name="accessTransactionTransferWrite" label="Kelola Transfer Stok" />
                         <AccessCheckbox form={form} name="accessTransactionAdjustmentRead" label="Lihat Penyesuaian Stok" />
