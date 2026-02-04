@@ -10,6 +10,7 @@ export interface User {
 
   // access
   accessOverviewRead: boolean;
+  accessReportRead: boolean;
   accessPointOfSalesRead: boolean;
   accessPointOfSalesWrite: boolean;
   accessAppUserRead: boolean;
@@ -57,6 +58,7 @@ export interface CreateUserDTO {
 
   // access
   accessOverviewRead?: boolean;
+  accessReportRead?: boolean;
   accessPointOfSalesRead?: boolean;
   accessPointOfSalesWrite?: boolean;
   accessAppUserRead?: boolean;
@@ -94,6 +96,7 @@ export interface CreateUserDTO {
 
 export interface UpdateUserAccessDTO {
   accessOverviewRead: boolean;
+  accessReportRead: boolean;
   accessPointOfSalesRead: boolean;
   accessPointOfSalesWrite: boolean;
   accessAppUserRead: boolean;

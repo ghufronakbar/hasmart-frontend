@@ -6,6 +6,8 @@ import {
     useCallback,
     ReactNode,
     useMemo,
+    useState,
+    useEffect,
 } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,6 +20,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     logout: () => void;
     refetch: () => void;
+    accessToken: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const user = data?.data || null;
     const isAuthenticated = !!user && !isError;
+    const [accessToken, setAccessToken] = useState<string | null>(null);
 
     const logout = useCallback(() => {
         // Clear token from localStorage
@@ -47,6 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.push("/login");
     }, [queryClient, router]);
 
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            setAccessToken(token);
+        }
+    }, []);
+
     const value = useMemo(
         () => ({
             user,
@@ -54,8 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated,
             logout,
             refetch,
+            accessToken,
         }),
-        [user, isLoading, isAuthenticated, logout, refetch]
+        [user, isLoading, isAuthenticated, logout, refetch, accessToken]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

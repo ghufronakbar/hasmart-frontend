@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 
 export enum UserAccess {
   accessOverviewRead = "accessOverviewRead",
+  accessReportRead = "accessReportRead",
   accessPointOfSalesRead = "accessPointOfSalesRead",
   accessPointOfSalesWrite = "accessPointOfSalesWrite",
   accessAppUserRead = "accessAppUserRead",

@@ -83,6 +83,7 @@ const createUserSchema = z.object({
     password: z.string().min(6, "Password minimal 6 karakter"),
     isActive: z.boolean(),
     // Access Fields
+    accessReportRead: z.boolean(),
     accessOverviewRead: z.boolean(),
     accessPointOfSalesRead: z.boolean(),
     accessPointOfSalesWrite: z.boolean(),
@@ -121,6 +122,7 @@ const createUserSchema = z.object({
 
 const updateUserAccessSchema = z.object({
     accessOverviewRead: z.boolean(),
+    accessReportRead: z.boolean(),
     accessPointOfSalesRead: z.boolean(),
     accessPointOfSalesWrite: z.boolean(),
     accessAppUserRead: z.boolean(),
@@ -302,6 +304,7 @@ export default function UsersPage() {
                 name: "",
                 password: "",
                 isActive: true,
+                accessReportRead: false,
                 accessOverviewRead: false,
                 accessPointOfSalesRead: false,
                 accessPointOfSalesWrite: false,
@@ -351,6 +354,7 @@ export default function UsersPage() {
         setSelectedUser(user);
         updateAccessForm.reset({
             accessOverviewRead: user.accessOverviewRead,
+            accessReportRead: user.accessReportRead,
             accessPointOfSalesRead: user.accessPointOfSalesRead,
             accessPointOfSalesWrite: user.accessPointOfSalesWrite,
             accessAppUserRead: user.accessAppUserRead,
@@ -554,7 +558,7 @@ export default function UsersPage() {
                 },
             },
         ],
-        [handleEditAccess]
+        [handleEditAccess, hasAccess]
     );
 
     // --- Table Instance ---

@@ -17,6 +17,12 @@ export const menuItems: MenuItem[] = [
         access: UserAccess.accessOverviewRead,
     },
     {
+        title: "Laporan",
+        href: "/dashboard/report",
+        icon: <FileText className="h-4 w-4" />,
+        access: UserAccess.accessReportRead,
+    },
+    {
         title: "Point of Sales",
         href: "/dashboard/point-of-sales",
         icon: <ShoppingBasketIcon className="h-4 w-4" />,
