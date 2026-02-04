@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -15,7 +16,14 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { AxiosError } from "axios";
 
-const REPORTS = [
+interface ReportConfig {
+    id: string;
+    title: string;
+    description: string;
+    endpoint: string;
+}
+
+const PERIOD_REPORTS: ReportConfig[] = [
     {
         id: "purchase",
         title: "Laporan Pembelian",
@@ -52,6 +60,27 @@ const REPORTS = [
         description: "Rekap retur penjualan grosir/B2B.",
         endpoint: "/report/sell-return",
     },
+    {
+        id: "member-purchase",
+        title: "Laporan Pembelian Member",
+        description: "Rekap history pembelian member (Top Spender).",
+        endpoint: "/report/member-purchase",
+    },
+];
+
+const MASTER_REPORTS: ReportConfig[] = [
+    {
+        id: "item",
+        title: "Laporan Barang",
+        description: "Rekap data master barang dan stok saat ini.",
+        endpoint: "/report/item",
+    },
+    {
+        id: "member",
+        title: "Laporan Member",
+        description: "Rekap data member per kategori.",
+        endpoint: "/report/member",
+    },
 ];
 
 export default function ReportPage() {
@@ -73,7 +102,8 @@ export default function ReportPage() {
     const handleDownload = async (
         reportId: string,
         endpoint: string,
-        formatType: "pdf" | "xlsx"
+        formatType: "pdf" | "xlsx",
+        useDateFilter: boolean
     ) => {
         if (loading) return;
 
@@ -103,12 +133,15 @@ export default function ReportPage() {
             params.append("accessToken", newAccessToken);
             params.append("exportAs", formatType);
 
-            if (dateRange?.from) {
-                params.append("dateStart", dateRange.from.toISOString());
+            if (useDateFilter) {
+                if (dateRange?.from) {
+                    params.append("dateStart", dateRange.from.toISOString());
+                }
+                if (dateRange?.to) {
+                    params.append("dateEnd", dateRange.to.toISOString());
+                }
             }
-            if (dateRange?.to) {
-                params.append("dateEnd", dateRange.to.toISOString());
-            }
+
             if (branch) {
                 params.append("branchId", branch.id.toString());
             }
@@ -125,21 +158,58 @@ export default function ReportPage() {
             console.error("Download error:", error);
             toast.dismiss();
             toast.error(error instanceof AxiosError ? error.response?.data?.message || "Gagal mengunduh laporan" : "Gagal mengunduh laporan");
-
-            // // If refresh failed, might need login
-            // if (error?.response?.status === 401) {
-            //     // Let auth provider handle redirect or manual
-            //     // router.push('/login') 
-            // }
         } finally {
             setLoading(null);
         }
     };
 
+    const renderReportCard = (report: ReportConfig, useDateFilter: boolean) => (
+        <Card key={report.id} className="flex flex-col">
+            <CardHeader>
+                <CardTitle className="text-lg">{report.title}</CardTitle>
+                <CardDescription>{report.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto pt-0">
+                <div className="flex flex-col gap-3">
+                    <Button
+                        variant="outline"
+                        className="w-full flex gap-2"
+                        onClick={() =>
+                            handleDownload(report.id, report.endpoint, "pdf", useDateFilter)
+                        }
+                        disabled={!!loading}
+                    >
+                        {loading === `${report.id}-pdf` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <FileText className="h-4 w-4 text-red-500" />
+                        )}
+                        PDF
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="w-full flex gap-2"
+                        onClick={() =>
+                            handleDownload(report.id, report.endpoint, "xlsx", useDateFilter)
+                        }
+                        disabled={!!loading}
+                    >
+                        {loading === `${report.id}-xlsx` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                        )}
+                        Excel
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Laporan</h1>
                     <p className="text-muted-foreground">
@@ -148,57 +218,42 @@ export default function ReportPage() {
                             : "Menampilkan laporan semua cabang"}
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground mr-2">
-                        Periode:
-                    </span>
-                    <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+            </div>
+
+            {/* Section 1: Period Reports */}
+            <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
+                    <div>
+                        <h2 className="text-lg font-semibold">Laporan Periode</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Laporan transaksi dan aktivitas berdasarkan rentang waktu.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            Periode:
+                        </span>
+                        <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+                    </div>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {PERIOD_REPORTS.map(report => renderReportCard(report, true))}
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {REPORTS.map((report) => (
-                    <Card key={report.id} className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle className="text-lg">{report.title}</CardTitle>
-                            <CardDescription>{report.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="mt-auto pt-0">
-                            <div className="flex flex-col gap-3">
-                                <Button
-                                    variant="outline"
-                                    className="w-full flex gap-2"
-                                    onClick={() =>
-                                        handleDownload(report.id, report.endpoint, "pdf")
-                                    }
-                                    disabled={!!loading}
-                                >
-                                    {loading === `${report.id}-pdf` ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <FileText className="h-4 w-4 text-red-500" />
-                                    )}
-                                    PDF
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="w-full flex gap-2"
-                                    onClick={() =>
-                                        handleDownload(report.id, report.endpoint, "xlsx")
-                                    }
-                                    disabled={!!loading}
-                                >
-                                    {loading === `${report.id}-xlsx` ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                                    )}
-                                    Excel
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+            {/* Section 2: Master Reports */}
+            <div className="space-y-4">
+                <div className="border-b pb-4">
+                    <h2 className="text-lg font-semibold">Laporan Master & Stok</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Laporan data master dan posisi stok saat ini (Snapshot).
+                    </p>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {MASTER_REPORTS.map(report => renderReportCard(report, false))}
+                </div>
             </div>
         </div>
     );
