@@ -155,6 +155,11 @@ export const queryKeys = {
     stockAlerts: (params?: unknown) =>
       [...queryKeys.overview.all, "stock-alerts", params] as const,
   },
+  report: {
+    all: ["report"] as const,
+    receipt: (type: string, receiptId: number | string) =>
+      [...queryKeys.report.all, "receipt", type, receiptId] as const,
+  },
 };
 
 export const invalidationMap = {
