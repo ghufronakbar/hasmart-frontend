@@ -1,5 +1,5 @@
 import { UserAccess } from "@/hooks/use-access-control";
-import { LayoutDashboard, Database, FileText, Settings, ShoppingBasketIcon } from "lucide-react";
+import { LayoutDashboard, Database, FileText, Settings, ShoppingBasketIcon, Receipt } from "lucide-react";
 
 export type MenuItem = {
     title: string;
@@ -27,6 +27,11 @@ export const menuItems: MenuItem[] = [
         href: "/dashboard/point-of-sales",
         icon: <ShoppingBasketIcon className="h-4 w-4" />,
         access: UserAccess.accessPointOfSalesRead,
+    },
+    {
+        title: "Label Harga",
+        href: "/dashboard/label-prepare",
+        icon: <Receipt className="h-4 w-4" />,
     },
     {
         title: "Aplikasi",

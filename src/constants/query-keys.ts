@@ -159,6 +159,8 @@ export const queryKeys = {
     all: ["report"] as const,
     receipt: (type: string, receiptId: number | string) =>
       [...queryKeys.report.all, "receipt", type, receiptId] as const,
+    label: (masterItemVariantIds: number[]) =>
+      [...queryKeys.report.all, "label", masterItemVariantIds] as const,
   },
 };
 
