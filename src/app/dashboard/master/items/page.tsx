@@ -82,6 +82,9 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Combobox } from "@/components/custom/combobox";
 import { AxiosError } from "axios";
 import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { useItemBulkUpdateVariantPrice } from "@/hooks/master/use-item";
 
 // --- Validation Schemas ---
 
@@ -164,6 +167,47 @@ export default function ItemsPage() {
     // removed: originalVariants (no longer needed for diffing, we just trust the form state action)
 
     const [deletingItem, setDeletingItem] = useState<Item | null>(null);
+
+    // --- Bulk Update State ---
+    const [isBulkMode, setIsBulkMode] = useState(false);
+    const [selectedVariantIds, setSelectedVariantIds] = useState<number[]>([]);
+    const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+    const [bulkNewPrice, setBulkNewPrice] = useState<number>(0);
+
+    const { mutate: bulkUpdate, isPending: isBulkUpdating } = useItemBulkUpdateVariantPrice();
+
+    const handleBulkUpdateToggle = () => {
+        setIsBulkMode(!isBulkMode);
+        setSelectedVariantIds([]); // Reset selection on toggle
+    };
+
+    const handleVariantSelection = (variantId: number, checked: boolean) => {
+        if (checked) {
+            setSelectedVariantIds(prev => [...prev, variantId]);
+        } else {
+            setSelectedVariantIds(prev => prev.filter(id => id !== variantId));
+        }
+    };
+
+    const handleBulkUpdateSubmit = () => {
+        if (selectedVariantIds.length === 0) return;
+
+        bulkUpdate({
+            masterItemVariants: selectedVariantIds,
+            sellPrice: bulkNewPrice
+        }, {
+            onSuccess: () => {
+                toast.success("Harga jual berhasil diperbarui");
+                setIsBulkDialogOpen(false);
+                setIsBulkMode(false);
+                setSelectedVariantIds([]);
+                setBulkNewPrice(0);
+            },
+            onError: (err) => {
+                toast.error(err instanceof AxiosError ? err?.response?.data?.message || "Gagal update harga" : "Gagal update harga");
+            }
+        });
+    };
 
     // --- Unified Form ---
     const unifiedForm = useForm<CreateItemFormValues>({
@@ -429,11 +473,19 @@ export default function ItemsPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Manajemen Item</h2>
-                {hasAccess &&
-                    <Button onClick={handleOpenCreate}>
-                        <Plus className="mr-2 h-4 w-4" /> Tambah Item
-                    </Button>
-                }
+                <div className="flex gap-2">
+                    {hasAccess && (
+                        <Button variant={isBulkMode ? "secondary" : "outline"} onClick={handleBulkUpdateToggle}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            {isBulkMode ? "Batal Edit Massal" : "Edit Harga Jual Massal"}
+                        </Button>
+                    )}
+                    {hasAccess &&
+                        <Button onClick={handleOpenCreate}>
+                            <Plus className="mr-2 h-4 w-4" /> Tambah Item
+                        </Button>
+                    }
+                </div>
             </div>
 
             {/* Filter */}
@@ -459,7 +511,7 @@ export default function ItemsPage() {
             </div>
 
             {/* Custom Table with Rowspan */}
-            <div className="rounded-md border">
+            <div className="rounded-md border mb-16 lg:mb-0">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -518,7 +570,7 @@ export default function ItemsPage() {
                                 const rowSpan = variants.length || 1;
 
                                 return variants.map((variant, index) => (
-                                    <TableRow key={variant.id}>
+                                    <TableRow key={variant.id} className={selectedVariantIds.includes(variant.id) ? "bg-muted/50" : ""}>
                                         {index === 0 && (
                                             <>
                                                 <TableCell rowSpan={rowSpan} className="align-top font-medium border-r">
@@ -558,7 +610,15 @@ export default function ItemsPage() {
                                             {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(variant.recordedProfitAmount))} ({variant.recordedProfitPercentage}%)
                                         </TableCell>
                                         <TableCell>
-                                            {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(variant.sellPrice))}
+                                            <div className="flex items-center gap-2">
+                                                {isBulkMode && (
+                                                    <Checkbox
+                                                        checked={selectedVariantIds.includes(variant.id)}
+                                                        onCheckedChange={(c) => handleVariantSelection(variant.id, !!c)}
+                                                    />
+                                                )}
+                                                {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(parseFloat(variant.sellPrice))}
+                                            </div>
                                         </TableCell>
 
                                         {index === 0 && hasAccess && (
@@ -623,6 +683,86 @@ export default function ItemsPage() {
                     </Button>
                 </div>
             </div>
+
+            {/* --- BULK ACTION FOOTER --- */}
+            {isBulkMode && (
+                <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t p-4 shadow-up flex items-center justify-between lg:pl-64">
+                    <div className="flex items-center gap-4">
+                        <span className="font-semibold">{selectedVariantIds.length} item dipilih</span>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                                setIsBulkMode(false);
+                                setSelectedVariantIds([]);
+                            }}
+                        >
+                            Batal
+                        </Button>
+                    </div>
+                    <Button
+                        onClick={() => setIsBulkDialogOpen(true)}
+                        disabled={selectedVariantIds.length === 0}
+                    >
+                        Update Harga
+                    </Button>
+                </div>
+            )}
+
+            {/* --- BULK UPDATE DIALOG --- */}
+            <Dialog open={isBulkDialogOpen} onOpenChange={(open) => {
+                if (!open) {
+                    setIsBulkDialogOpen(false);
+                    setBulkNewPrice(0);
+                }
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Update Harga Massal</DialogTitle>
+                        <DialogDescription>
+                            Anda akan mengubah harga jual untuk {selectedVariantIds.length} item yang dipilih.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Harga Jual Baru</Label>
+                            <Input
+                                type="number"
+                                placeholder="0"
+                                value={bulkNewPrice}
+                                onChange={(e) => setBulkNewPrice(Number(e.target.value))}
+                            />
+                        </div>
+
+                        <div className="rounded-md border p-2 max-h-[200px] overflow-y-auto bg-muted/20">
+                            <h4 className="text-xs font-semibold mb-2 text-muted-foreground">Item yang dipilih:</h4>
+                            <ul className="text-xs space-y-1">
+                                {itemData?.data?.flatMap(item =>
+                                    item.masterItemVariants
+                                        ?.filter(v => selectedVariantIds.includes(v.id))
+                                        .map(v => (
+                                            <li key={v.id} className="flex justify-between">
+                                                <span>{item.name} ({v.unit})</span>
+                                                <span className="text-muted-foreground">
+                                                    {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(Number(v.sellPrice))} →
+                                                </span>
+                                            </li>
+                                        ))
+                                )}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsBulkDialogOpen(false)}>Batal</Button>
+                        <Button onClick={handleBulkUpdateSubmit} disabled={isBulkUpdating}>
+                            {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Simpan Perubahan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* --- UNIFIED DIALOG (Create & Edit) --- */}
             <Dialog open={isFormOpen} onOpenChange={(open) => {

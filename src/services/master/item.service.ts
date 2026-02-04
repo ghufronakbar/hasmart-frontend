@@ -55,4 +55,15 @@ export const itemService = {
     );
     return response.data;
   },
+
+  bulkUpdateVariantPrice: async (data: {
+    masterItemVariants: number[];
+    sellPrice: number;
+  }) => {
+    const response = await axiosInstance.patch<boolean>(
+      "/master/item/bulk-variant-price",
+      data,
+    );
+    return response.data;
+  },
 };

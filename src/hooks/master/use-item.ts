@@ -80,3 +80,17 @@ export function useItemByCode(code: string | undefined) {
     enabled: !!code,
   });
 }
+
+export function useItemBulkUpdateVariantPrice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { masterItemVariants: number[]; sellPrice: number }) =>
+      itemService.bulkUpdateVariantPrice(data),
+    onSuccess: () => {
+      invalidationMap.master.item().forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: key });
+      });
+    },
+  });
+}
