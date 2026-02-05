@@ -103,12 +103,12 @@ const purchaseItemSchema = z.object({
 const createPurchaseSchema = z.object({
     transactionDate: z.date(),
     dueDate: z.date(),
-    masterSupplierId: z.coerce.number().min(1, "Supplier wajib"),
+    masterSupplierCode: z.string().min(1, "Kode supplier wajib"),
     branchId: z.coerce.number().min(1, "Branch wajib"),
     notes: z.string().optional(),
     taxPercentage: z.coerce.number().min(0).max(100).default(0),
     items: z.array(purchaseItemSchema).min(1, "Minimal 1 item"),
-    invoiceNumber: z.string(),
+    invoiceNumber: z.string().min(1, "No. Invoice wajib"),
 });
 
 
@@ -116,6 +116,7 @@ import { Purchase, CreatePurchaseDTO } from "@/types/transaction/purchase";
 import { Item, ItemVariant } from "@/types/master/item";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Combobox } from "@/components/custom/combobox";
+import { AutocompleteInput } from "@/components/custom/autocomplete-input";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
 import { useModEnter } from "@/hooks/function/use-mod-enter";
 import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
@@ -218,7 +219,7 @@ export default function PurchasePage() {
         setIsCreateOpen(open);
         if (!open) {
             setEditingId(null);
-            form.reset({ branchId: branch?.id, transactionDate: new Date(), dueDate: new Date(), items: [], taxPercentage: 0 });
+            form.reset({ branchId: branch?.id, transactionDate: new Date(), dueDate: new Date(), items: [], taxPercentage: 0, masterSupplierCode: "", invoiceNumber: "" });
         }
     };
 
@@ -230,7 +231,7 @@ export default function PurchasePage() {
         defaultValues: {
             transactionDate: new Date(),
             dueDate: new Date(),
-            masterSupplierId: 0,
+            masterSupplierCode: "",
             branchId: branch?.id || 0,
             notes: "",
             taxPercentage: 0,
@@ -400,7 +401,7 @@ export default function PurchasePage() {
                 transactionDate: new Date(purchase.transactionDate),
                 dueDate: purchase.dueDate ? new Date(purchase.dueDate) : new Date(),
                 invoiceNumber: purchase.invoiceNumber,
-                masterSupplierId: purchase.masterSupplierId,
+                masterSupplierCode: purchase.masterSupplier?.code || "",
                 branchId: purchase.branchId,
                 notes: purchase.notes || "",
                 taxPercentage: parseFloat(Number(taxPct).toFixed(2)),
@@ -636,18 +637,24 @@ export default function PurchasePage() {
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
-                                        <FormField control={form.control} name="masterSupplierId" render={({ field }) => (
+                                        <FormField control={form.control} name="masterSupplierCode" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Supplier</FormLabel>
-                                                <Combobox
-                                                    value={field.value}
-                                                    onChange={(val) => form.setValue("masterSupplierId", val)}
-                                                    options={supplierOptions}
-                                                    placeholder="Pilih Supplier"
-                                                    inputValue={searchSupplier}
-                                                    onInputChange={setSearchSupplier}
-                                                    renderLabel={(item) => <div className="flex flex-col"><span className="font-semibold">{item.code} ({item.name})</span><span className="text-[10px] text-muted-foreground">{(item as unknown as { masterItemCategory?: { name: string } }).masterItemCategory?.name}</span></div>}
-                                                />
+                                                <FormControl>
+                                                    <AutocompleteInput
+                                                        value={field.value}
+                                                        onChange={(val) => form.setValue("masterSupplierCode", val.toUpperCase())}
+                                                        options={supplierOptions}
+                                                        placeholder="Ketik kode supplier..."
+                                                        onSearch={setSearchSupplier}
+                                                        renderLabel={(item) => (
+                                                            <div className="flex flex-col">
+                                                                <span className="font-semibold">{item.code}</span>
+                                                                <span className="text-xs text-muted-foreground">{item.name}</span>
+                                                            </div>
+                                                        )}
+                                                    />
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )} />

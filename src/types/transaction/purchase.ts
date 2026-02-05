@@ -54,7 +54,7 @@ export interface CreatePurchaseDTO {
   invoiceNumber: string;
   transactionDate: string;
   dueDate?: string | null;
-  masterSupplierId: number;
+  masterSupplierCode: string;
   branchId: number;
   notes?: string | null;
   taxPercentage: number;
