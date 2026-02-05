@@ -118,6 +118,10 @@ export default function FrontStockPage() {
             accessorKey: "frontStock",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Stok Depan" />,
         },
+        {
+            accessorKey: "rearStock",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Stok Belakang" />,
+        },
     ], []);
 
     const table = useReactTable({
