@@ -79,7 +79,7 @@ import { useItemCategories } from "@/hooks/master/use-item-category";
 import { useUnits } from "@/hooks/master/use-unit";
 import { useDebounce } from "@/hooks/use-debounce";
 
-import { Combobox } from "@/components/custom/combobox";
+import { AutocompleteInput } from "@/components/custom/autocomplete-input";
 import { AxiosError } from "axios";
 import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -102,8 +102,8 @@ const variantSchema = z.object({
 const createItemSchema = z.object({
     name: z.string().min(1, "Nama item wajib"),
     code: z.string().min(1, "Kode item wajib"),
-    masterSupplierId: z.coerce.number().min(1, "Supplier wajib"),
-    masterItemCategoryId: z.coerce.number().min(1, "Kategori wajib"),
+    masterSupplierCode: z.string().min(1, "Supplier wajib"),
+    masterItemCategoryCode: z.string().min(1, "Kategori wajib"),
     isActive: z.boolean().default(true),
     buyPrice: z.coerce.number().optional(), // TODO: sementara display
     masterItemVariants: z.array(variantSchema)
@@ -113,11 +113,6 @@ const createItemSchema = z.object({
             return baseUnits.length <= 1;
         }, "Hanya boleh ada satu variant dengan konversi 1 (Base Unit).")
         .refine(() => {
-            // In Create wizard, we just ensure duplicates of amount=1 are caught.
-            // We can optionally enforce AT LEAST ONE base unit if required, but backend only says min 1 variant.
-            // Usually Base Unit is required. Let's enforce it?
-            // Backend spec: "Minimal harus ada 1 variant". If logic says amount=1 isBaseUnit=true, then user *must* add one with amount 1?
-            // Not strictly enforced by backend text, but good UX. Let's stick to duplications check first.
             return true;
         }),
 });
@@ -141,6 +136,16 @@ export default function ItemsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearch = useDebounce(searchTerm, 500);
 
+    // --- Autocomplete States ---
+    const [searchSupplier, setSearchSupplier] = useState("");
+    const debouncedSearchSupplier = useDebounce(searchSupplier, 300);
+
+    const [searchCategory, setSearchCategory] = useState("");
+    const debouncedSearchCategory = useDebounce(searchCategory, 300);
+
+    const [searchUnit, setSearchUnit] = useState("");
+    // Unit search is client-side filtered, no debounce needed
+
     // --- Hooks ---
     const { data: itemData, isLoading: isItemLoading } = useItems({
         page: pagination.pageIndex + 1,
@@ -149,9 +154,46 @@ export default function ItemsPage() {
         sort: sorting[0]?.desc ? "desc" : "asc",
         sortBy: sorting[0]?.id,
     });
-    const { data: suppliers } = useSuppliers({ limit: 100, sortBy: "code", sort: "asc" });
-    const { data: categories } = useItemCategories({ limit: 100, sortBy: "code", sort: "asc" });
-    const { data: units } = useUnits({ limit: 100, sortBy: "unit", sort: "asc" });
+
+    // Server-side search for Supplier & Category
+    const { data: suppliers } = useSuppliers({
+        limit: 20,
+        sortBy: "code",
+        sort: "asc",
+        search: debouncedSearchSupplier
+    });
+
+    const { data: categories } = useItemCategories({
+        limit: 20,
+        sortBy: "code",
+        sort: "asc",
+        search: debouncedSearchCategory
+    });
+
+    // Client-side filtering for Units (always fetch 100)
+    const { data: unitsData } = useUnits({ limit: 100, sortBy: "unit", sort: "asc" });
+
+    // Filter and Sort UnitsClient-side
+    // Logic: Exact matches first, then starts with, then includes
+    const filteredUnits = (unitsData?.data || []).filter(u =>
+        u.unit.toLowerCase().includes(searchUnit.toLowerCase())
+    ).sort((a, b) => {
+        const query = searchUnit.toLowerCase();
+        const aUnit = a.unit.toLowerCase();
+        const bUnit = b.unit.toLowerCase();
+
+        // Exact match priority
+        if (aUnit === query && bUnit !== query) return -1;
+        if (bUnit === query && aUnit !== query) return 1;
+
+        // Starts with priority
+        if (aUnit.startsWith(query) && !bUnit.startsWith(query)) return -1;
+        if (bUnit.startsWith(query) && !aUnit.startsWith(query)) return 1;
+
+        return 0;
+    });
+
+    const units = { ...unitsData, data: filteredUnits };
 
     const { mutate: createItem, isPending: isCreating } = useCreateItem();
     const { mutate: updateItem, isPending: isUpdating } = useUpdateItem();
@@ -215,8 +257,8 @@ export default function ItemsPage() {
         defaultValues: {
             name: "",
             code: "",
-            masterSupplierId: 0,
-            masterItemCategoryId: 0,
+            masterSupplierCode: "",
+            masterItemCategoryCode: "",
             isActive: true,
             masterItemVariants: [{
                 unit: "",
@@ -343,8 +385,8 @@ export default function ItemsPage() {
         unifiedForm.reset({
             name: "",
             code: "",
-            masterSupplierId: 0,
-            masterItemCategoryId: 0,
+            masterSupplierCode: "",
+            masterItemCategoryCode: "",
             isActive: true,
             masterItemVariants: [{
                 unit: "",
@@ -374,8 +416,8 @@ export default function ItemsPage() {
         unifiedForm.reset({
             name: item.name,
             code: item.code,
-            masterSupplierId: item.masterSupplierId,
-            masterItemCategoryId: item.masterItemCategoryId,
+            masterSupplierCode: item.masterSupplier?.code || "",
+            masterItemCategoryCode: item.masterItemCategory?.code || "",
             isActive: item.isActive,
             buyPrice: parseFloat(item.recordedBuyPrice),
             masterItemVariants: item.masterItemVariants?.map(v => ({
@@ -439,8 +481,8 @@ export default function ItemsPage() {
 
             const itemData = { // UpdateItemDTO extended
                 name: values.name,
-                masterSupplierId: values.masterSupplierId,
-                masterItemCategoryId: values.masterItemCategoryId,
+                masterSupplierCode: values.masterSupplierCode,
+                masterItemCategoryCode: values.masterItemCategoryCode,
                 isActive: values.isActive,
                 masterItemVariants: processedVariants,
                 buyPrice: values.buyPrice
@@ -844,16 +886,16 @@ export default function ItemsPage() {
                                         )} />
                                     )}
 
-                                    <FormField control={unifiedForm.control} name="masterItemCategoryId" render={({ field }) => (
+                                    <FormField control={unifiedForm.control} name="masterItemCategoryCode" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Kategori</FormLabel>
                                             <FormControl>
-                                                <Combobox
-                                                    value={field.value}
+                                                <AutocompleteInput
+                                                    value={field.value.toUpperCase()}
                                                     onChange={field.onChange}
                                                     options={categories?.data || []}
-                                                    placeholder="Pilih Kategori"
-                                                    searchPlaceholder="Cari kategori..."
+                                                    onSearch={setSearchCategory}
+                                                    placeholder="Ketik code/nama kategori..."
                                                     renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
                                                 />
                                             </FormControl>
@@ -861,16 +903,16 @@ export default function ItemsPage() {
                                         </FormItem>
                                     )} />
 
-                                    <FormField control={unifiedForm.control} name="masterSupplierId" render={({ field }) => (
+                                    <FormField control={unifiedForm.control} name="masterSupplierCode" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Supplier</FormLabel>
                                             <FormControl>
-                                                <Combobox
-                                                    value={field.value}
+                                                <AutocompleteInput
+                                                    value={field.value.toUpperCase()}
                                                     onChange={field.onChange}
                                                     options={suppliers?.data || []}
-                                                    placeholder="Pilih Supplier"
-                                                    searchPlaceholder="Cari supplier..."
+                                                    onSearch={setSearchSupplier}
+                                                    placeholder="Ketik code/nama supplier..."
                                                     renderLabel={(item) => <>{item.code ? <span className="mr-2 font-mono text-xs opacity-50">{item.code}</span> : null} {item.name}</>}
                                                 />
                                             </FormControl>
@@ -965,16 +1007,16 @@ export default function ItemsPage() {
                                                             <FormField control={unifiedForm.control} name={`masterItemVariants.${index}.unit`} render={({ field }) => (
                                                                 <FormItem className="w-full">
                                                                     <FormLabel className="text-xs">Satuan</FormLabel>
-                                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                                        <FormControl><SelectTrigger className="w-full">
-                                                                            <SelectValue placeholder="Pilih" />
-                                                                        </SelectTrigger></FormControl>
-                                                                        <SelectContent>
-                                                                            {units?.data?.map(u => (
-                                                                                <SelectItem key={u.id} value={u.unit}>{u.unit}</SelectItem>
-                                                                            ))}
-                                                                        </SelectContent>
-                                                                    </Select>
+                                                                    <div className="w-full">
+                                                                        <AutocompleteInput
+                                                                            value={field.value}
+                                                                            onChange={field.onChange}
+                                                                            options={units?.data?.map(u => ({ id: u.id, name: u.unit, code: u.unit })) || []}
+                                                                            onSearch={setSearchUnit}
+                                                                            placeholder="Pilih/Ketik"
+                                                                            className="h-9"
+                                                                        />
+                                                                    </div>
                                                                     <FormMessage />
                                                                 </FormItem>
                                                             )} />

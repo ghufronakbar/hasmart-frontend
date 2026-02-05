@@ -43,16 +43,16 @@ export interface CreateItemVariantDTO {
 export interface CreateItemDTO {
   name: string;
   code: string;
-  masterSupplierId: number;
-  masterItemCategoryId: number;
+  masterSupplierCode: string;
+  masterItemCategoryCode: string;
   isActive: boolean;
   masterItemVariants: CreateItemVariantDTO[];
 }
 
 export interface UpdateItemDTO {
   name?: string;
-  masterSupplierId?: number;
-  masterItemCategoryId?: number;
+  masterSupplierCode?: string;
+  masterItemCategoryCode?: string;
   isActive?: boolean;
   masterItemVariants?: MasterItemVariantUpdateDTO[];
 }
