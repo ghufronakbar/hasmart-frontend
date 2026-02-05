@@ -16,6 +16,7 @@ export interface User {
   accessPrintLabelRead: boolean;
   accessFrontStockRead: boolean;
   accessFrontStockWrite: boolean;
+  accessFrontStockHistoryRead: boolean;
   accessAppUserRead: boolean;
   accessAppUserWrite: boolean;
   accessAppBranchWrite: boolean;
@@ -67,6 +68,7 @@ export interface CreateUserDTO {
   accessPrintLabelRead?: boolean;
   accessFrontStockRead?: boolean;
   accessFrontStockWrite?: boolean;
+  accessFrontStockHistoryRead?: boolean;
   accessAppUserRead?: boolean;
   accessAppUserWrite?: boolean;
   accessAppBranchWrite?: boolean;
@@ -108,6 +110,7 @@ export interface UpdateUserAccessDTO {
   accessPrintLabelRead: boolean;
   accessFrontStockRead: boolean;
   accessFrontStockWrite: boolean;
+  accessFrontStockHistoryRead: boolean;
   accessAppUserRead: boolean;
   accessAppUserWrite: boolean;
   accessAppBranchWrite: boolean;

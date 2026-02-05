@@ -10,6 +10,7 @@ export enum UserAccess {
   accessPrintLabelRead = "accessPrintLabelRead",
   accessFrontStockRead = "accessFrontStockRead",
   accessFrontStockWrite = "accessFrontStockWrite",
+  accessFrontStockHistoryRead = "accessFrontStockHistoryRead",
   accessAppUserRead = "accessAppUserRead",
   accessAppUserWrite = "accessAppUserWrite",
   accessAppBranchWrite = "accessAppBranchWrite",

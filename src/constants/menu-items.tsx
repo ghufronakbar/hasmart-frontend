@@ -1,5 +1,5 @@
 import { UserAccess } from "@/hooks/use-access-control";
-import { LayoutDashboard, Database, FileText, Settings, ShoppingBasketIcon, Receipt } from "lucide-react";
+import { LayoutDashboard, Database, FileText, Settings, ShoppingBasketIcon, Receipt, LampDeskIcon } from "lucide-react";
 
 export type MenuItem = {
     title: string;
@@ -32,6 +32,22 @@ export const menuItems: MenuItem[] = [
         title: "Label Harga",
         href: "/dashboard/label-prepare",
         icon: <Receipt className="h-4 w-4" />,
+    },
+    {
+        title: "Stok Depan",
+        icon: <LampDeskIcon className="h-4 w-4" />,
+        children: [
+            {
+                title: "Stok Depan",
+                href: "/dashboard/front-stock/item",
+                access: UserAccess.accessFrontStockRead,
+            },
+            {
+                title: "Riwayat Transfer Stok Depan",
+                href: "/dashboard/front-stock/transfer-history",
+                access: UserAccess.accessFrontStockHistoryRead,
+            }
+        ]
     },
     {
         title: "Aplikasi",

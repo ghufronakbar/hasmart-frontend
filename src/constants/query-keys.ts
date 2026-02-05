@@ -162,6 +162,26 @@ export const queryKeys = {
     label: (masterItemVariantIds: number[]) =>
       [...queryKeys.report.all, "label", masterItemVariantIds] as const,
   },
+  stock: {
+    frontStock: {
+      items: {
+        all: ["stock", "front-stock", "items"] as const,
+        list: (params?: unknown) =>
+          [...queryKeys.stock.frontStock.items.all, "list", params] as const,
+      },
+      transfers: {
+        all: ["stock", "front-stock", "transfers"] as const,
+        list: (params?: unknown) =>
+          [
+            ...queryKeys.stock.frontStock.transfers.all,
+            "list",
+            params,
+          ] as const,
+        detail: (id: number | string) =>
+          [...queryKeys.stock.frontStock.transfers.all, "detail", id] as const,
+      },
+    },
+  },
 };
 
 export const invalidationMap = {
@@ -187,5 +207,11 @@ export const invalidationMap = {
     sell: () => [queryKeys.transaction.sell.all],
     sellReturn: () => [queryKeys.transaction.sellReturn.all],
     transfer: () => [queryKeys.transaction.transfers.all],
+  },
+  stock: {
+    frontStock: {
+      items: () => [queryKeys.stock.frontStock.items.all],
+      transfers: () => [queryKeys.stock.frontStock.transfers.all],
+    },
   },
 };
