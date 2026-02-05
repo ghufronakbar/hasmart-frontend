@@ -12,6 +12,7 @@ import {
     Loader2,
     Trash2,
     MoreHorizontal,
+    Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -34,6 +35,13 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 import { FrontStockTransfer } from "@/types/stock/front-stock";
 import {
@@ -72,6 +80,7 @@ export default function FrontStockHistoryPage() {
 
     const { mutate: deleteTransfer, isPending: isDeleting } = useDeleteFrontStockTransfer();
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [selectedTransfer, setSelectedTransfer] = useState<FrontStockTransfer | null>(null);
 
     const handleDelete = () => {
         if (deletingId) {
@@ -126,6 +135,9 @@ export default function FrontStockHistoryPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSelectedTransfer(row.original)}>
+                            <Eye className="mr-2 h-4 w-4" /> Lihat Detail
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                             className="text-red-600 focus:text-red-600"
                             onClick={() => setDeletingId(row.original.id)}
@@ -199,6 +211,94 @@ export default function FrontStockHistoryPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <FrontStockTransferDetailDialog
+                open={!!selectedTransfer}
+                onOpenChange={(open) => !open && setSelectedTransfer(null)}
+                transfer={selectedTransfer}
+            />
         </div>
+    );
+}
+
+function FrontStockTransferDetailDialog({
+    open,
+    onOpenChange,
+    transfer
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    transfer: FrontStockTransfer | null;
+}) {
+    if (!transfer) return null;
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Detail Transfer Stock</DialogTitle>
+                </DialogHeader>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span className="text-muted-foreground block">Tanggal</span>
+                        <span className="font-medium">
+                            {format(new Date(transfer.createdAt), "dd MMMM yyyy HH:mm", { locale: id })}
+                        </span>
+                    </div>
+                    <div>
+                        <span className="text-muted-foreground block">Oleh</span>
+                        <span className="font-medium">{transfer.user?.name || "-"}</span>
+                    </div>
+                    <div className="col-span-2">
+                        <span className="text-muted-foreground block">Catatan</span>
+                        <span className="font-medium whitespace-pre-wrap">{transfer.notes || "-"}</span>
+                    </div>
+                </div>
+
+                <div className="border rounded-md mt-4">
+                    <div className="max-h-[300px] overflow-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-muted sticky top-0">
+                                <tr>
+                                    <th className="px-4 py-2 text-left font-medium">Barang</th>
+                                    <th className="px-4 py-2 text-left font-medium">Varian</th>
+                                    <th className="px-4 py-2 text-right font-medium">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {transfer.items?.map((item) => (
+                                    <tr key={item.id}>
+                                        <td className="px-4 py-2">
+                                            <div className="font-medium">{item.masterItem?.name || "-"}</div>
+                                            <div className="text-xs text-muted-foreground">{item.masterItem?.code || "-"}</div>
+                                        </td>
+                                        <td className="px-4 py-2">
+                                            {item.masterItemVariant ? (
+                                                <span>{item.masterItemVariant.unit} (Isi: {item.masterItemVariant.amount})</span>
+                                            ) : "-"}
+                                        </td>
+                                        <td className={`px-4 py-2 text-right font-medium ${item.amount > 0 ? "text-green-600" : "text-red-600"}`}>
+                                            {item.amount > 0 ? `+${item.amount}` : item.amount}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {(!transfer.items || transfer.items.length === 0) && (
+                                    <tr>
+                                        <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                                            Tidak ada item
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button onClick={() => onOpenChange(false)}>Tutup</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

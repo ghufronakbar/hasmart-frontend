@@ -247,11 +247,14 @@ function CreateTransferDialog({ open, onOpenChange }: { open: boolean, onOpenCha
                         />
 
                         <div className="space-y-2">
-                            <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-start">
                                 <FormLabel>Barang</FormLabel>
-                                <Button type="button" variant="outline" size="sm" onClick={() => append({ masterItemId: 0, masterVariantId: 0, transferAmount: 0 })}>
-                                    <Plus className="h-4 w-4 mr-1" /> Tambah Barang
-                                </Button>
+                                <div className="flex flex-col items-end gap-2">
+                                    <Button type="button" variant="outline" size="sm" onClick={() => append({ masterItemId: 0, masterVariantId: 0, transferAmount: 0 })}>
+                                        <Plus className="h-4 w-4 mr-1" /> Tambah Barang
+                                    </Button>
+                                    <span className="text-xs text-muted-foreground">Atau tekan Ctrl+Enter</span>
+                                </div>
                             </div>
                             <div className="max-h-[350px] overflow-y-auto space-y-2 p-1">
                                 {fields.map((field, index) => (
