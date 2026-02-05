@@ -89,6 +89,7 @@ const createSalesSchema = z.object({
     notes: z.string().optional(),
     items: z.array(salesItemSchema).min(1, "Belum ada item di keranjang"),
     transactionDate: z.date(),
+    cashReceived: z.coerce.number().min(0, "Jumlah tidak boleh minus"),
 });
 
 type CreateSalesFormValues = z.infer<typeof createSalesSchema>;
@@ -134,6 +135,7 @@ export default function PointOfSalesPage() {
             items: [],
             memberCode: "",
             transactionDate: new Date(),
+            cashReceived: 0,
         },
     });
 
@@ -435,7 +437,8 @@ export default function PointOfSalesPage() {
                 qty: i.qty,
                 salesPrice: i.salesPrice,
                 discounts: i.discounts
-            }))
+            })),
+            cashReceived: values.cashReceived,
         };
 
         createSales(payload, {
@@ -446,6 +449,7 @@ export default function PointOfSalesPage() {
                     items: [],
                     memberCode: "",
                     transactionDate: new Date(),
+                    cashReceived: 0,
                 });
                 setMemberVerified(null);
                 setSearchItem("");
@@ -738,6 +742,26 @@ export default function PointOfSalesPage() {
                                 Rp {calculations.grandTotal.toLocaleString("id-ID")}
                             </div>
                         </div>
+
+
+                        <div className="space-y-4 pt-4 border-t">
+                            <div className="space-y-1">
+                                <span className="text-xs font-medium text-muted-foreground">Uang Diterima (Cash)</span>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    className="text-right font-bold text-lg h-10"
+                                    {...form.register("cashReceived")}
+                                />
+                            </div>
+                            <div className="flex justify-between items-end bg-blue-50 p-2 rounded">
+                                <div className="text-sm font-medium text-blue-800">Kembalian</div>
+                                <div className="text-lg font-bold text-blue-600">
+                                    Rp {Math.max(0, (Number(form.watch("cashReceived")) || 0) - calculations.grandTotal).toLocaleString("id-ID")}
+                                </div>
+                            </div>
+                        </div>
                     </CardContent>
 
                     <CardFooter className="p-3 bg-muted/10 border-t flex flex-col gap-2 flex-none">
@@ -779,6 +803,6 @@ export default function PointOfSalesPage() {
                     </CardFooter>
                 </Card>
             </div>
-        </div>
+        </div >
     );
 }

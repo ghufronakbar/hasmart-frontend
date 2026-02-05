@@ -101,6 +101,7 @@ const createSalesSchema = z.object({
     notes: z.string().optional(),
     items: z.array(salesItemSchema).min(1, "Minimal 1 item"),
     transactionDate: z.date().optional(), // Optional UI helper, might not be sent if API doesn't support it
+    cashReceived: z.coerce.number().min(0, "Jumlah tidak boleh minus"),
 });
 
 type CreateSalesFormValues = z.infer<typeof createSalesSchema>;
@@ -198,6 +199,7 @@ export default function SalesPage() {
             items: [],
             memberCode: "",
             transactionDate: new Date(),
+            cashReceived: 0,
         },
     });
 
@@ -325,6 +327,7 @@ export default function SalesPage() {
                 salesPrice: item.salesPrice,
                 discounts: item.discounts,
             })),
+            cashReceived: values.cashReceived,
         };
 
         if (editingId) {
@@ -378,7 +381,8 @@ export default function SalesPage() {
                     qty: item.qty,
                     salesPrice: parseFloat(String(item.salesPrice || 0)),
                     discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
-                }))
+                })),
+                cashReceived: parseFloat(sales.cashReceived || "0")
             };
             form.reset(formDataVal);
         }
@@ -761,6 +765,37 @@ export default function SalesPage() {
                                             </div>
                                         </div>
 
+
+                                        {/* Payment Section */}
+                                        <div className="mt-4 flex justify-end">
+                                            <div className="w-full md:w-1/3 space-y-4 border-t pt-4">
+                                                <FormField control={form.control} name="cashReceived" render={({ field }) => (
+                                                    <FormItem className="space-y-1">
+                                                        <FormLabel>Uang Diterima (Cash)</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                placeholder="0"
+                                                                {...field}
+                                                                className="text-right font-bold text-lg"
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} />
+
+                                                <div className="flex justify-between font-bold text-lg text-blue-600 bg-blue-50 p-2 rounded">
+                                                    <span>Kembalian</span>
+                                                    <span>
+                                                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(
+                                                            Math.max(0, (Number(form.watch("cashReceived")) || 0) - calculations.grandTotal)
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className="flex justify-end gap-2 mt-8">
                                             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isCreating || isUpdating}>Batal</Button>
                                             <Button type="submit" disabled={isCreating || isUpdating}>
@@ -792,6 +827,6 @@ export default function SalesPage() {
                     </AlertDialog>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

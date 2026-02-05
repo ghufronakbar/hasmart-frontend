@@ -30,6 +30,8 @@ export interface Sales {
   masterMemberId?: number | null;
   notes?: string | null;
   recordedTotalAmount: string; // Decimal from backend
+  cashReceived: string; // Decimal from backend
+  cashChange: string; // Decimal from backend
   masterMember?: Member;
   transactionSalesItems?: SalesItem[]; // Backend relation name
   createdAt: string;
@@ -49,6 +51,7 @@ export interface CreateSalesDTO {
   branchId: number;
   memberCode?: string | null;
   notes?: string | null;
+  cashReceived: number;
   items: CreateSalesItemDTO[];
 }
 
