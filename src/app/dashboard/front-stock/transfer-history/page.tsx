@@ -103,10 +103,6 @@ export default function FrontStockHistoryPage() {
             cell: ({ row }) => format(new Date(row.getValue("createdAt")), "dd MMM yyyy HH:mm", { locale: id }),
         },
         {
-            accessorKey: "notes",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Catatan" />,
-        },
-        {
             id: "items_summary",
             header: "Barang",
             cell: ({ row }) => {
@@ -119,6 +115,14 @@ export default function FrontStockHistoryPage() {
                     return `${itemName} (${amountStr}${variantUnit})`;
                 }).join(", ");
                 return <div className="max-w-[400px] truncate" title={summary}>{summary}</div>;
+            }
+        },
+        {
+            accessorKey: "notes",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Catatan" />,
+            cell: ({ row }) => {
+                const notes: string | null = row.getValue("notes");
+                return <span className="whitespace-pre-wrap max-w-[50px] truncate">{notes || "-"}</span>;
             }
         },
         {

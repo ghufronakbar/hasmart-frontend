@@ -82,6 +82,7 @@ type TransferFormValues = z.infer<typeof transferSchema>;
 
 export default function FrontStockPage() {
     useAccessControl([UserAccess.accessFrontStockRead], true);
+    const hasAccess = useAccessControl([UserAccess.accessFrontStockWrite], false);
     const { branch, isLoading: isBranchLoading } = useBranch();
     const router = useRouter();
 
@@ -144,10 +145,10 @@ export default function FrontStockPage() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Front Stock</h2>
-                <Button onClick={() => setIsTransferOpen(true)}>
+                {hasAccess && <Button onClick={() => setIsTransferOpen(true)}>
                     <ArrowRightLeft className="mr-2 h-4 w-4" />
-                    Buat Transfer Baru
-                </Button>
+                    Pindahkan Stok
+                </Button>}
             </div>
 
             <DataTableToolbar

@@ -62,6 +62,7 @@ import { itemService } from "@/services";
 import { useRouter } from "next/navigation";
 import { CreateMemberDialog } from "./components/create-member-dialog";
 import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
+import { AxiosError } from "axios";
 
 // --- Schema (Mirrors SalesPage but streamlined) ---
 const discountSchema = z.object({
@@ -110,6 +111,7 @@ export default function PointOfSalesPage() {
     const [isCreateMemberOpen, setIsCreateMemberOpen] = useState(false);
     const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
     const [isScanning, setIsScanning] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const barcodeInputRef = useRef<HTMLInputElement>(null);
 
     // --- Queries ---
@@ -428,6 +430,12 @@ export default function PointOfSalesPage() {
 
     // Submit
     const onSubmit = (values: CreateSalesFormValues) => {
+        // Validation: Verify Cash Received
+        if (values.cashReceived < calculations.grandTotal) {
+            toast.error("Uang diterima kurang dari total transaksi!");
+            return;
+        }
+
         // Strip UI helpers
         const payload = {
             ...values,
@@ -453,7 +461,15 @@ export default function PointOfSalesPage() {
                 });
                 setMemberVerified(null);
                 setSearchItem("");
+                setIsConfirmOpen(false); // Close dialog on success
                 toast.success("Transaksi Berhasil!");
+            },
+            onError: (error) => {
+                if (error instanceof AxiosError) {
+                    toast.error(error.response?.data?.errors?.message || "Terjadi kesalahan");
+                } else {
+                    toast.error("Terjadi kesalahan");
+                }
             }
         });
     };
@@ -770,7 +786,7 @@ export default function PointOfSalesPage() {
                             className="min-h-[40px] h-10 resize-none text-xs py-2"
                             {...form.register("notes")}
                         />
-                        <AlertDialog>
+                        <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                             <AlertDialogTrigger asChild>
                                 {hasAccess &&
                                     <Button
@@ -794,7 +810,10 @@ export default function PointOfSalesPage() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={form.handleSubmit(onSubmit)}>
+                                    <AlertDialogAction onClick={(e) => {
+                                        e.preventDefault(); // Prevent auto-close
+                                        form.handleSubmit(onSubmit)();
+                                    }}>
                                         Bayar Sekarang
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
