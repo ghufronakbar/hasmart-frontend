@@ -6,8 +6,10 @@ import { useReactToPrint } from "react-to-print";
 import { LabelItem } from "@/components/custom/label-item";
 import { useLabel } from "@/hooks/report/use-label";
 import { Button } from "@/components/ui/button";
+import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 
 export default function ReceiptPreviewPage() {
+    useAccessControl([UserAccess.accessPrintLabelRead], true);
     const searchParams = useSearchParams();
     const masterItemIds = searchParams.get("id");
     const masterItemIdsNums = masterItemIds?.split(",").map((id) => Number(id));

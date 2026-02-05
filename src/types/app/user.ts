@@ -13,6 +13,9 @@ export interface User {
   accessReportRead: boolean;
   accessPointOfSalesRead: boolean;
   accessPointOfSalesWrite: boolean;
+  accessPrintLabelRead: boolean;
+  accessFrontStockRead: boolean;
+  accessFrontStockWrite: boolean;
   accessAppUserRead: boolean;
   accessAppUserWrite: boolean;
   accessAppBranchWrite: boolean;
@@ -61,6 +64,9 @@ export interface CreateUserDTO {
   accessReportRead?: boolean;
   accessPointOfSalesRead?: boolean;
   accessPointOfSalesWrite?: boolean;
+  accessPrintLabelRead?: boolean;
+  accessFrontStockRead?: boolean;
+  accessFrontStockWrite?: boolean;
   accessAppUserRead?: boolean;
   accessAppUserWrite?: boolean;
   accessAppBranchWrite?: boolean;
@@ -99,6 +105,9 @@ export interface UpdateUserAccessDTO {
   accessReportRead: boolean;
   accessPointOfSalesRead: boolean;
   accessPointOfSalesWrite: boolean;
+  accessPrintLabelRead: boolean;
+  accessFrontStockRead: boolean;
+  accessFrontStockWrite: boolean;
   accessAppUserRead: boolean;
   accessAppUserWrite: boolean;
   accessAppBranchWrite: boolean;
