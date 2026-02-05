@@ -103,7 +103,8 @@ axiosInstance.interceptors.response.use(
           localStorage.removeItem("token");
           localStorage.removeItem("refreshToken");
           // Only redirect if not already on auth pages
-          if (!window.location.pathname.includes("/login")) {
+          const allowed = ["/login", "/setup", "/"];
+          if (!allowed.includes(window.location.pathname)) {
             window.location.href = "/login";
           }
         }
