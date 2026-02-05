@@ -83,4 +83,10 @@ export const menuItems: MenuItem[] = [
             { title: "Transfer Stok", href: "/dashboard/transaction/transfer", access: UserAccess.accessTransactionTransferRead },
         ],
     },
+    {
+        title: "Backup & Restore",
+        href: "/dashboard/backup-restore",
+        icon: <Settings className="h-4 w-4" />,
+        access: UserAccess.isSuperUser,
+    }
 ];

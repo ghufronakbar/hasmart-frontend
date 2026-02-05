@@ -3,6 +3,7 @@ import { useAuth } from "./use-auth";
 import { useEffect, useMemo } from "react";
 
 export enum UserAccess {
+  isSuperUser = "isSuperUser",
   accessOverviewRead = "accessOverviewRead",
   accessReportRead = "accessReportRead",
   accessPointOfSalesRead = "accessPointOfSalesRead",
