@@ -247,10 +247,11 @@ export default function ItemsPage() {
     useEffect(() => {
         const subscription = unifiedForm.watch((value, { name }) => {
             // Price Calculation Logic
-            // 1. Variant specific change (profit or amount)
-            const matchVariant = name?.match(/masterItemVariants\.(\d+)\.(profitPercentage|amount)/);
+            // 1. Variant specific change (profit, amount, OR sellPrice)
+            const matchVariant = name?.match(/masterItemVariants\.(\d+)\.(profitPercentage|amount|sellPrice)/);
             if (matchVariant) {
                 const index = parseInt(matchVariant[1]);
+                const fieldChanged = matchVariant[2]; // 'profitPercentage', 'amount', or 'sellPrice'
 
                 // Get current values
                 const itemBuyPrice = unifiedForm.getValues('buyPrice') || 0;
@@ -258,18 +259,52 @@ export default function ItemsPage() {
 
                 if (variant) {
                     const amount = parseFloat(variant.amount?.toString() || "0");
-                    const profitPct = parseFloat(variant.profitPercentage?.toString() || "0");
-
-                    // 1. Calculate Variant Buy Price = Item Buy Price * Amount
                     const variantBuyPrice = itemBuyPrice * amount;
 
-                    // 2. Calculate Sell Price = Variant Buy Price + (Profit)
-                    // Profit = Variant Buy Price * Profit% / 100
-                    const sellPrice = variantBuyPrice + (variantBuyPrice * profitPct / 100);
+                    // Always update displayed Buy Price for the variant because amount/itemBuyPrice might have changed
+                    // (We can do this safely as it's a calculated display field)
+                    // Note: setValue usually triggers watch. We need to be careful.
+                    // But 'buyPrice' field in variant is not watched by this regex (it watches profit/amount/sellPrice).
+                    // So setting buyPrice is safe from this specific loop.
+                    if (fieldChanged !== 'sellPrice') {
+                        // Wait, we need to be careful not to overwrite user input if they are typing?
+                        // Actually variant.buyPrice is disabled in UI (line 960), so it's purely calculated.
+                        unifiedForm.setValue(`masterItemVariants.${index}.buyPrice`, parseFloat(variantBuyPrice.toFixed(2)));
+                    }
 
-                    // Update fields
-                    unifiedForm.setValue(`masterItemVariants.${index}.buyPrice`, parseFloat(variantBuyPrice.toFixed(2)));
-                    unifiedForm.setValue(`masterItemVariants.${index}.sellPrice`, parseFloat(sellPrice.toFixed(2)));
+                    if (fieldChanged === 'sellPrice') {
+                        // Case A: User changed Sell Price -> Recalculate Profit %
+                        const currentSellPrice = parseFloat(variant.sellPrice?.toString() || "0");
+
+                        if (variantBuyPrice > 0) {
+                            const profitAmount = currentSellPrice - variantBuyPrice;
+                            const newProfitPct = (profitAmount / variantBuyPrice) * 100;
+
+                            // Update Profit % ONLY if diff is significant (avoid loop)
+                            const currentProfitPct = parseFloat(variant.profitPercentage?.toString() || "0");
+                            if (Math.abs(newProfitPct - currentProfitPct) > 0.01) {
+                                unifiedForm.setValue(`masterItemVariants.${index}.profitPercentage`, parseFloat(newProfitPct.toFixed(2)));
+                            }
+                        }
+                    } else {
+                        // Case B: User changed Profit% or Amount -> Recalculate Sell Price
+                        const profitPct = parseFloat(variant.profitPercentage?.toString() || "0");
+
+                        // Calculate Sell Price = Variant Buy Price + (Profit)
+                        const newSellPrice = variantBuyPrice + (variantBuyPrice * profitPct / 100);
+
+                        // Update Sell Price ONLY if diff is significant
+                        const currentSellPrice = parseFloat(variant.sellPrice?.toString() || "0");
+                        if (Math.abs(newSellPrice - currentSellPrice) > 10) { // Tolerance Rp 10? Or 0.01? 
+                            // Using 0.01 for precision
+                            if (Math.abs(newSellPrice - currentSellPrice) > 0.01) {
+                                unifiedForm.setValue(`masterItemVariants.${index}.sellPrice`, parseFloat(newSellPrice.toFixed(2)));
+                            }
+                        }
+
+                        // Also ensure buyPrice is updated if amount changed
+                        unifiedForm.setValue(`masterItemVariants.${index}.buyPrice`, parseFloat(variantBuyPrice.toFixed(2)));
+                    }
                 }
             }
 
