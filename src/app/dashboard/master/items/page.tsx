@@ -92,8 +92,8 @@ const variantSchema = z.object({
     id: z.number().optional(), // For edit
     unit: z.string().min(1, "Satuan wajib"),
     amount: z.coerce.number().min(1, "Jumlah konversi min 1"),
-    buyPrice: z.coerce.number(), // hanya untuk display
-    profitPercentage: z.coerce.number(), // TODO: sementara display
+    buyPrice: z.coerce.number().optional(), // hanya untuk display
+    profitPercentage: z.coerce.number().optional(), // TODO: sementara display
     sellPrice: z.coerce.number().min(0, "Harga jual min 0"),
     isBaseUnit: z.boolean().default(false),
     action: z.enum(["create", "update", "delete"]).default("create"),
@@ -105,7 +105,7 @@ const createItemSchema = z.object({
     masterSupplierId: z.coerce.number().min(1, "Supplier wajib"),
     masterItemCategoryId: z.coerce.number().min(1, "Kategori wajib"),
     isActive: z.boolean().default(true),
-    buyPrice: z.coerce.number(), // TODO: sementara display
+    buyPrice: z.coerce.number().optional(), // TODO: sementara display
     masterItemVariants: z.array(variantSchema)
         .min(1, "Minimal 1 variant wajib")
         .refine((variants) => {
@@ -228,7 +228,7 @@ export default function ItemsPage() {
                 unit: "",
                 amount: 12,
                 sellPrice: 0,
-                isBaseUnit: false
+                isBaseUnit: false,
             }
             ],
         },
@@ -782,7 +782,9 @@ export default function ItemsPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <Form {...unifiedForm}>
-                        <form onSubmit={unifiedForm.handleSubmit(onUnifiedSubmit)} className="space-y-6">
+                        <form onSubmit={
+                            unifiedForm.handleSubmit(onUnifiedSubmit)
+                        } className="space-y-6">
                             {/* 2-Column Layout */}
                             <div className="grid grid-cols-2 gap-6">
                                 {/* LEFT COLUMN: Item Info */}
