@@ -149,9 +149,9 @@ export default function ItemsPage() {
         sort: sorting[0]?.desc ? "desc" : "asc",
         sortBy: sorting[0]?.id,
     });
-    const { data: suppliers } = useSuppliers({ limit: 100 });
-    const { data: categories } = useItemCategories({ limit: 100 });
-    const { data: units } = useUnits({ limit: 100 });
+    const { data: suppliers } = useSuppliers({ limit: 100, sortBy: "code", sort: "asc" });
+    const { data: categories } = useItemCategories({ limit: 100, sortBy: "code", sort: "asc" });
+    const { data: units } = useUnits({ limit: 100, sortBy: "unit", sort: "asc" });
 
     const { mutate: createItem, isPending: isCreating } = useCreateItem();
     const { mutate: updateItem, isPending: isUpdating } = useUpdateItem();

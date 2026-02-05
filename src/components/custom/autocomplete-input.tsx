@@ -78,6 +78,12 @@ export const AutocompleteInput = ({
                         onChange(e.target.value);
                         if (!open && e.target.value) setOpen(true);
                     }}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && open && options.length > 0) {
+                            e.preventDefault();
+                            handleSelect(options[0]);
+                        }
+                    }}
                     onFocus={() => {
                         if (value && options.length > 0) setOpen(true);
                     }}

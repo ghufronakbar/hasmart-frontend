@@ -165,7 +165,7 @@ export default function PurchasePage() {
     const { data: suppliers } = useSuppliers({
         limit: 20,
         search: debouncedSearchSupplier,
-        sortBy: "name",
+        sortBy: "code",
         sort: "asc"
     });
 
