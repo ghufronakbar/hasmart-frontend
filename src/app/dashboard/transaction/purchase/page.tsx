@@ -439,8 +439,26 @@ export default function PurchasePage() {
         form.setValue(`items.${index}.masterItemVariantId`, variantId);
     };
 
+    // Focus management for new items
+    const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (lastAddedIndex !== null) {
+            const element = document.getElementById(`item-select-${lastAddedIndex}`);
+            if (element) {
+                element.focus();
+                // Reset after focusing
+                setLastAddedIndex(null);
+            }
+        }
+    }, [lastAddedIndex, fields.length]); // Depend on fields.length to wait for render
+
     const handleNewItem = () => {
-        append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, purchasePrice: 0, discounts: [] })
+        append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, purchasePrice: 0, discounts: [] });
+        // Set target index to focus (length is before append in current render, so it will be index = current length)
+        // Actually append updates state, so we need to wait for render. 
+        // fields.length will increase by 1. The index of new item will be old length.
+        setLastAddedIndex(fields.length);
     }
 
     useModEnter(() => handleNewItem(), {
@@ -724,6 +742,7 @@ export default function PurchasePage() {
                                                                 <FormItem>
                                                                     <FormLabel className="text-xs">Barang</FormLabel>
                                                                     <Combobox
+                                                                        inputId={`item-select-${index}`}
                                                                         value={field.value}
                                                                         onChange={(val) => handleItemSelect(index, val)}
                                                                         options={itemOptions}

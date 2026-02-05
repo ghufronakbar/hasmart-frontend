@@ -271,7 +271,7 @@ export default function TransferPage() {
         name: "items",
     });
 
-    useModEnter(() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 0 }));
+    useModEnter(() => handleNewItem());
 
     // Update fromId when branch context changes
     useEffect(() => {
@@ -281,6 +281,25 @@ export default function TransferPage() {
     }, [branch, form]);
 
     const watchedItems = useWatch({ control: form.control, name: "items" }) as CreateTransferFormValues["items"];
+
+    // Focus management for new items
+    const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (lastAddedIndex !== null) {
+            const element = document.getElementById(`item-select-${lastAddedIndex}`);
+            if (element) {
+                element.focus();
+                // Reset after focusing
+                setLastAddedIndex(null);
+            }
+        }
+    }, [lastAddedIndex, fields.length]); // Depend on fields.length to wait for render
+
+    const handleNewItem = () => {
+        append({ masterItemId: 0, masterItemVariantId: 0, qty: 0 });
+        setLastAddedIndex(fields.length);
+    }
 
     // Handlers
     const handleCreate = () => {
@@ -292,7 +311,8 @@ export default function TransferPage() {
             notes: "",
             items: [],
         });
-        append({ masterItemId: 0, masterItemVariantId: 0, qty: 0 }); // Start with 1 empty row
+        // Start with 1 empty row. Logic for focus not needed on fresh open.
+        append({ masterItemId: 0, masterItemVariantId: 0, qty: 0 });
         setIsCreateOpen(true);
     };
 
@@ -575,7 +595,7 @@ export default function TransferPage() {
                                     <div className="flex items-start justify-between">
                                         <h4 className="text-sm font-semibold">List Barang</h4>
                                         <div className="flex flex-col items-end gap-2">
-                                            <Button type="button" size="sm" variant="outline" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 0 })}>
+                                            <Button type="button" size="sm" variant="outline" onClick={handleNewItem}>
                                                 <CirclePlus className="mr-2 h-4 w-4" /> Tambah Barang
                                             </Button>
                                             <span className="text-muted-foreground text-xs ml-2">Atau tekan Ctrl+Enter</span>
@@ -613,6 +633,7 @@ export default function TransferPage() {
                                                             <FormItem>
                                                                 <FormLabel className="text-xs">Barang</FormLabel>
                                                                 <Combobox
+                                                                    inputId={`item-select-${index}`}
                                                                     value={field.value}
                                                                     onChange={(val) => handleItemSelect(index, val)}
                                                                     options={getItemOptions(field.value)}

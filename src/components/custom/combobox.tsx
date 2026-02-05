@@ -43,6 +43,7 @@ export interface ComboboxProps {
     className?: string;
     inputValue?: string;
     onInputChange?: (val: string) => void;
+    inputId?: string;
 }
 
 export const Combobox = ({
@@ -55,7 +56,8 @@ export const Combobox = ({
     disabled = false,
     className,
     inputValue,
-    onInputChange
+    onInputChange,
+    inputId
 }: ComboboxProps) => {
     const [open, setOpen] = useState(false);
     const selected = options?.find((item) => item.id === value);
@@ -65,6 +67,7 @@ export const Combobox = ({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
+                    id={inputId}
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}

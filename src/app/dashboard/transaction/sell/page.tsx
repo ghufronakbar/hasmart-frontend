@@ -230,7 +230,7 @@ export default function SellPage() {
         name: "items",
     });
 
-    useModEnter(() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, sellPrice: 0, discounts: [] }));
+    useModEnter(() => handleNewItem());
 
     const watchedItems = useWatch({ control: form.control, name: "items" }) as SellItemFormValues[];
     const watchedTaxPercentage = useWatch({ control: form.control, name: "taxPercentage" });
@@ -437,6 +437,25 @@ export default function SellPage() {
         }
     };
 
+    // Focus management for new items
+    const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (lastAddedIndex !== null) {
+            const element = document.getElementById(`item-select-${lastAddedIndex}`);
+            if (element) {
+                element.focus();
+                // Reset after focusing
+                setLastAddedIndex(null);
+            }
+        }
+    }, [lastAddedIndex, fields.length]); // Depend on fields.length to wait for render
+
+    const handleNewItem = () => {
+        append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, sellPrice: 0, discounts: [] });
+        setLastAddedIndex(fields.length);
+    }
+
     // Delete Logic
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const handleDelete = () => {
@@ -621,7 +640,7 @@ export default function SellPage() {
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                                     {/* Header Info */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-4 border rounded-lg bg-slate-50">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-4 border rounded-lg bg-slate-50 items-start">
                                         {/* Member Verification Section */}
                                         <div className="col-span-2">
                                             <FormField control={form.control} name="memberCode" render={({ field }) => (
@@ -696,7 +715,7 @@ export default function SellPage() {
                                         <div className="flex justify-between items-start mb-4">
                                             <h3 className="text-lg font-semibold">Item Barang</h3>
                                             <div className="flex flex-col items-end gap-2">
-                                                <Button type="button" size="sm" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, qty: 1, sellPrice: 0, discounts: [] })}>
+                                                <Button type="button" size="sm" onClick={handleNewItem}>
                                                     <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
                                                 </Button>
                                                 <span className="text-muted-foreground/80 text-xs ml-2 font-normal">Atau tekan Ctrl+Enter</span>
@@ -722,6 +741,7 @@ export default function SellPage() {
                                                                 <FormItem>
                                                                     <FormLabel className="text-xs">Barang</FormLabel>
                                                                     <Combobox
+                                                                        inputId={`item-select-${index}`}
                                                                         value={field.value}
                                                                         onChange={(val) => handleItemSelect(index, val)}
                                                                         options={itemOptions}

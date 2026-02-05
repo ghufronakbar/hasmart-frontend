@@ -179,7 +179,7 @@ export default function AdjustStockPage() {
         name: "items",
     });
 
-    useModEnter(() => append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 }));
+    useModEnter(() => handleNewItem());
 
     const watchedItems = useWatch({ control: form.control, name: "items" });
 
@@ -202,6 +202,25 @@ export default function AdjustStockPage() {
         setIsCreateOpen(true);
     };
 
+    // Focus management for new items
+    const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (lastAddedIndex !== null) {
+            const element = document.getElementById(`item-select-${lastAddedIndex}`);
+            if (element) {
+                element.focus();
+                // Reset after focusing
+                setLastAddedIndex(null);
+            }
+        }
+    }, [lastAddedIndex, fields.length]); // Depend on fields.length to wait for render
+
+    const handleNewItem = () => {
+        append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 });
+        setLastAddedIndex(fields.length);
+    }
+
     const handleCreate = () => {
         setDetailId(null);
         form.reset({
@@ -210,7 +229,10 @@ export default function AdjustStockPage() {
             branchId: branch?.id || 0,
             items: [],
         });
-        append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 }); // Start with 1 empty row
+        // We do NOT use handleNewItem here because the dialog transition might interfere with focus
+        // OR we can, but let's stick to simple append for initial open.
+        // Actually, for consistency, let's just append. Focus might be lost to dialog open anyway.
+        append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 });
         setIsCreateOpen(true);
     };
 
@@ -538,7 +560,7 @@ export default function AdjustStockPage() {
                                     <div className="flex items-start justify-between">
                                         <h4 className="text-sm font-semibold">List Barang</h4>
                                         <div className="flex flex-col items-end gap-2">
-                                            <Button type="button" size="sm" variant="outline" onClick={() => append({ masterItemId: 0, masterItemVariantId: 0, actualQty: 0 })}>
+                                            <Button type="button" size="sm" variant="outline" onClick={handleNewItem}>
                                                 <CirclePlus className="mr-2 h-4 w-4" /> Tambah Barang
                                             </Button>
                                             <span className="text-muted-foreground text-xs ml-2">Atau tekan Ctrl+Enter</span>
@@ -570,6 +592,7 @@ export default function AdjustStockPage() {
                                                             <FormItem>
                                                                 <FormLabel className="text-xs">Barang</FormLabel>
                                                                 <Combobox
+                                                                    inputId={`item-select-${index}`}
                                                                     value={field.value}
                                                                     onChange={(val) => handleItemSelect(index, val)}
                                                                     options={getRowOptions(field.value)}
