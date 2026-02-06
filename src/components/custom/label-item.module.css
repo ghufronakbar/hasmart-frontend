@@ -31,7 +31,7 @@
 /* KODE BARANG */
 .itemCode {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   margin-bottom: 2px;
   letter-spacing: 1px;
 }
@@ -39,7 +39,7 @@
 /* NAMA BARANG */
 .itemName {
   font-size: 16px; /* Lebih besar */
-  font-weight: 800; /* Lebih tebal */
+  font-weight: 600; /* Lebih tebal */
   line-height: 1.2;
   margin-bottom: 8px;
   text-transform: uppercase;
@@ -58,7 +58,7 @@
 /* BARIS HARGA PER UNIT */
 .variantRow {
   font-size: 18px; /* Harga harus paling menonjol */
-  font-weight: bold;
+  font-weight: 600;
   display: flex;
   justify-content: center;
   align-items: baseline;
