@@ -10,7 +10,7 @@ interface ReceiptProps {
 
 // --- HELPER ---
 const formatCurrency = (val: string) => {
-    return `Rp. ${val}`;
+    return Number(val).toLocaleString('id-ID');
 };
 
 const formatQty = (val: number) => {
@@ -23,7 +23,8 @@ export const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ data }, ref) 
         <div ref={ref} className={styles.receiptContainer}>
             {/* HEADER */}
             <div className={styles.header}>
-                <div className={styles.logoPlaceholder}>H</div>
+                {/* <div className={styles.logoPlaceholder}>H</div> */}
+                <img src="/logo.png" alt="Logo" className={styles.logo} />
                 <div className={styles.storeName}>{data.storeName}</div>
                 <div className={styles.address}>{data.address}</div>
                 <div className={styles.address}>{data.phone}</div>
