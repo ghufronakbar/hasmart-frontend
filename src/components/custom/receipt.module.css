@@ -9,7 +9,7 @@
   font-size: 10px;
   line-height: 1.3;
   text-transform: uppercase;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 /* HEADER */
@@ -27,7 +27,7 @@
 
 .storeName {
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 500;
   margin: 2px 0;
 }
 
@@ -66,7 +66,7 @@
   margin: 5px 0;
   padding: 2px 0;
   display: flex;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .colQty {
@@ -92,7 +92,7 @@
 }
 
 .itemName {
-  font-weight: bold;
+  font-weight: 500;
   margin-bottom: 1px;
 }
 
@@ -118,7 +118,7 @@
   margin-top: 2px;
   padding-top: 2px;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .footerMessage {
