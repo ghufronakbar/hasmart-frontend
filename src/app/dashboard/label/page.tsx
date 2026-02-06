@@ -13,8 +13,10 @@ export default function ReceiptPreviewPage() {
     const searchParams = useSearchParams();
     const masterItemIds = searchParams.get("id");
     const masterItemIdsNums = masterItemIds?.split(",").map((id) => Number(id));
+    const onlyBaseUnitParams = searchParams.get("onlyBaseUnit");
+    const onlyBaseUnit = onlyBaseUnitParams === "true";
 
-    const { data: transaction, isLoading, error: salesError } = useLabel(masterItemIdsNums!);
+    const { data: transaction, isLoading, error: salesError } = useLabel(masterItemIdsNums!, onlyBaseUnit);
 
     const componentRef = useRef<HTMLDivElement>(null);
 

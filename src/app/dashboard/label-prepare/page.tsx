@@ -49,6 +49,7 @@ export default function LabelPreparePage() {
     const debouncedSearch = useDebounce(searchTerm, 500);
 
     const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
+    const [onlyBaseUnit, setOnlyBaseUnit] = useState(false);
 
     // --- Hooks ---
     const { data: itemData, isLoading: isItemLoading } = useItems({
@@ -85,7 +86,7 @@ export default function LabelPreparePage() {
     const handlePrintSelection = () => {
         if (selectedItemIds.length === 0) return;
         const ids = selectedItemIds.join(",");
-        router.push(`/dashboard/label?id=${ids}`);
+        router.push(`/dashboard/label?id=${ids}&onlyBaseUnit=${onlyBaseUnit}`);
     };
 
     // Check if all visible items are selected
@@ -93,13 +94,20 @@ export default function LabelPreparePage() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Cetak Label Harga</h2>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
                     <Button onClick={handlePrintSelection} disabled={selectedItemIds.length === 0}>
                         <Printer className="mr-2 h-4 w-4" />
                         Cetak {selectedItemIds.length > 0 ? `(${selectedItemIds.length})` : ""}
                     </Button>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            checked={onlyBaseUnit}
+                            onCheckedChange={(checked) => setOnlyBaseUnit(!!checked)}
+                        />
+                        <span className="text-sm font-medium">Hanya Satuan Dasar</span>
+                    </div>
                 </div>
             </div>
 
