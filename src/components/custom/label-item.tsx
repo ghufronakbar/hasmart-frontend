@@ -24,7 +24,11 @@ export const LabelItem = forwardRef<HTMLDivElement, LabelItemProps>(({ data }, r
                 Kita render setiap item sebagai block terpisah 
             */}
             {data.map((item, index) => (
-                <div key={`${item.itemCode}-${index}`} className={styles.labelBlock}>
+                <div
+                    key={`${item.itemCode}-${index}`}
+                    className={styles.labelBlock}
+                    style={{ marginTop: index === 0 ? '10px' : undefined }}
+                >
 
                     {/* BAGIAN ATAS: KODE ITEM */}
                     <div className={styles.itemCode}>

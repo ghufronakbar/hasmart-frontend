@@ -10,15 +10,15 @@
 /* Setiap Label Item dibungkus block ini */
 .labelBlock {
   padding: 5px 2px;
-  /* Garis putus-putus sebagai penanda potong (opsional) */
-  border-bottom: 2px solid #000;
+  /* Border semua sisi (kotak) */
+  border: 2px solid #000;
 
   /* PENTING: Agar label tidak terpotong di tengah varian */
   break-inside: avoid;
   /* PENTING: Agar setelah satu label selesai, lanjut ke halaman/potongan kertas berikutnya */
   /* Namun untuk roll paper, biasanya printer otomatis menyesuaikan panjang. */
   /* Gunakan margin-bottom yang cukup sebagai pemisah visual */
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
   min-height: 80px; /* Minimal tinggi agar tidak terlalu gepeng */
 
   display: flex;
