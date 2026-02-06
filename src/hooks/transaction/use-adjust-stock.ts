@@ -40,6 +40,12 @@ export const useCreateAdjustStock = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.master.items.all,
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.list(),
+      });
     },
     onError: (error: AxiosError<{ errors?: { message: string } }>) => {
       toast.error(
@@ -62,6 +68,12 @@ export const useDeleteAdjustStock = () => {
       // Also invalidate items
       queryClient.invalidateQueries({
         queryKey: queryKeys.master.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.list(),
       });
     },
     onError: (error: AxiosError<{ errors?: { message: string } }>) => {
