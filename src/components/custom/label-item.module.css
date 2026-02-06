@@ -30,7 +30,7 @@
 
 /* KODE BARANG */
 .itemCode {
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 400;
   margin-bottom: 2px;
   letter-spacing: 1px;
@@ -38,10 +38,10 @@
 
 /* NAMA BARANG */
 .itemName {
-  font-size: 16px; /* Lebih besar */
-  font-weight: 600; /* Lebih tebal */
+  font-size: 12px; /* Lebih kecil */
+  font-weight: 500; /* Dikurangi dari bold */
   line-height: 1.2;
-  margin-bottom: 8px;
+  margin-bottom: 4px; /* Kurangi margin */
   text-transform: uppercase;
   word-wrap: break-word;
   max-width: 100%;
@@ -52,13 +52,13 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 /* BARIS HARGA PER UNIT */
 .variantRow {
-  font-size: 18px; /* Harga harus paling menonjol */
-  font-weight: 600;
+  font-size: 14px; /* Harga lebih proporsional */
+  font-weight: 600; /* Tetap menonjol tapi ukuran disesuaikan */
   display: flex;
   justify-content: center;
   align-items: baseline;
@@ -66,9 +66,9 @@
 }
 
 .unitName {
-  font-size: 14px;
-  margin-left: 4px;
-  font-weight: 600;
+  font-size: 10px;
+  margin-left: 2px;
+  font-weight: 500;
 }
 
 /* SETTINGAN KHUSUS PRINT */

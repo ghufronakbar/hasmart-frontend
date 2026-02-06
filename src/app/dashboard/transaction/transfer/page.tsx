@@ -380,7 +380,7 @@ export default function TransferPage() {
         {
             accessorKey: "notes",
             header: "Catatan",
-            cell: ({ row }) => <span className="text-muted-foreground italic truncate max-w-[200px] block">{row.original.notes || "-"}</span>
+            cell: ({ row }) => <span className="text-muted-foreground italic truncate max-w-[150px] block">{row.original.notes || "-"}</span>
         },
         {
             id: "actions",

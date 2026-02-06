@@ -9,7 +9,7 @@ import { useBranch } from "@/providers/branch-provider";
 import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, FileSpreadsheet, Loader2 } from "lucide-react";
+import { FileText, FileSpreadsheet, Loader2, Eye } from "lucide-react";
 import { userService } from "@/services/app/user.service";
 import { ENV } from "@/constants/env";
 import { toast } from "sonner";
@@ -102,7 +102,7 @@ export default function ReportPage() {
     const handleDownload = async (
         reportId: string,
         endpoint: string,
-        formatType: "pdf" | "xlsx",
+        formatType: "pdf" | "xlsx" | "preview",
         useDateFilter: boolean
     ) => {
         if (loading) return;
@@ -202,6 +202,21 @@ export default function ReportPage() {
                         Excel
                     </Button>
                 </div>
+                <Button
+                    variant="outline"
+                    className="w-full flex gap-2 mt-3"
+                    onClick={() =>
+                        handleDownload(report.id, report.endpoint, "preview", useDateFilter)
+                    }
+                    disabled={!!loading}
+                >
+                    {loading === `${report.id}-preview` ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Eye className="h-4 w-4" />
+                    )}
+                    Preview (PDF)
+                </Button>
             </CardContent>
         </Card>
     );
