@@ -295,7 +295,7 @@ export default function CashFlowPage() {
                 <h2 className="text-2xl font-bold tracking-tight">Arus Kas (Cash Flow)</h2>
                 {hasAccess &&
                     <ActionBranchButton onClick={() => handleOpenChange(true)}>
-                        <Plus className="mr-2 h-4 w-4" /> Transaksi Baru
+                        Transaksi Baru
                     </ActionBranchButton>
                 }
             </div>
