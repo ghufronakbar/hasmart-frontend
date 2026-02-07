@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleUser, Menu } from "lucide-react";
+import { CircleUser, Menu, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -17,19 +17,25 @@ import { MobileSidebar } from "./mobile-sidebar";
 import Link from "next/link";
 import { useProfile } from "@/hooks/app/use-user";
 import { useAuth } from "@/providers/auth-provider";
+import { useBranches } from "@/hooks/app/use-branch";
+import { Branch } from "@/types/app/branch";
 
 export function Navbar() {
     const router = useRouter();
     const { branch, setBranch } = useBranch();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { data: profile } = useProfile();
-    const { logout } = useAuth()
-
-
+    const { logout } = useAuth();
+    const { data: branchesData } = useBranches({ page: 1, limit: 50 });
+    const branches = branchesData?.data ?? [];
 
     const handleSwitchBranch = () => {
-        setBranch(null); // Clear context
-        router.push("/dashboard"); // Navigate to selection
+        setBranch(null);
+        router.push("/dashboard");
+    };
+
+    const handleSelectBranch = (b: Branch) => {
+        setBranch(b);
     };
 
     return (
@@ -48,29 +54,38 @@ export function Navbar() {
 
             <MobileSidebar open={mobileMenuOpen} setOpen={setMobileMenuOpen} />
 
-            <div className="w-full flex-1">
-                {/* Branch Selection Dropdown Placeholder */}
+            <div className="w-full flex-1 min-w-0">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-[200px] justify-start text-left font-normal hidden md:flex">
-                            {branch ? branch.name : "Pilih Cabang"}
+                        <Button
+                            variant="outline"
+                            className="w-full min-w-0 max-w-[200px] justify-start text-left font-normal md:w-[200px]"
+                        >
+                            <span className="truncate">
+                                {branch ? branch.name : "Pilih Cabang"}
+                            </span>
                         </Button>
                     </DropdownMenuTrigger>
-                    {/* For Mobile: maybe show just an icon or smaller button if needed, but sidebar covers nav */}
-
-                    <DropdownMenuContent className="w-[200px]">
-                        <DropdownMenuLabel>Ganti Cabang</DropdownMenuLabel>
+                    <DropdownMenuContent className="w-[200px]" align="start">
+                        <DropdownMenuLabel>Pilih Cabang</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {branches.map((b) => (
+                            <DropdownMenuItem
+                                key={b.id}
+                                onClick={() => handleSelectBranch(b)}
+                            >
+                                <span className="truncate flex-1">{b.name}</span>
+                                {branch?.id === b.id && (
+                                    <Check className="ml-auto h-4 w-4 shrink-0" />
+                                )}
+                            </DropdownMenuItem>
+                        ))}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleSwitchBranch}>
                             Ubah Cabang
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-
-                {/* Mobile Branch display if needed, or arguably it's in the sidebar title? For now let's keep it simple */}
-                <div className="md:hidden font-medium text-sm truncate">
-                    {branch ? branch.name : "Pilih Cabang"}
-                </div>
             </div>
             <DropdownMenu>
                 <span className="text-sm font-medium">{profile?.data?.name}</span>
