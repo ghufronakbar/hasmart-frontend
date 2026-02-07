@@ -42,6 +42,8 @@ export interface SalesReceipt {
   totalTransaction: number;
   totalAmount: string; // serialized Decimal
   totalReturn: string; // serialized Decimal
+  cashFlowIn: string;
+  cashFlowOut: string;
   paymentType: {
     CASH: string;
     DEBIT: string;

@@ -11,12 +11,16 @@ import {
 import { FilterQuery } from "@/types/common";
 import { useBranch } from "@/providers/branch-provider";
 
-export function useCashFlows(params?: FilterQuery) {
+export function useCashFlows(
+  params?: FilterQuery,
+  options?: { enabled?: boolean },
+) {
   const { branch } = useBranch();
   const p = { ...params, branchId: branch?.id };
   return useQuery<CashFlowListResponse>({
     queryKey: queryKeys.transaction.cashFlow.list(p),
     queryFn: () => cashFlowService.list(p),
+    enabled: options?.enabled,
   });
 }
 

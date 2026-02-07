@@ -59,7 +59,6 @@ import { Textarea } from "@/components/ui/textarea";
 
 import {
     useCashFlows,
-    useCashFlow,
     useCreateCashFlow,
     useUpdateCashFlow,
     useDeleteCashFlow,
@@ -97,8 +96,7 @@ export default function CashFlowPage() {
 
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const { data: cashFlowDetail, isLoading: isLoadingDetail } = useCashFlow(editingId);
+    const [editingItem, setEditingItem] = useState<CashFlow | null>(null);
 
     // --- Queries ---
     const { data: cashFlowData, isLoading } = useCashFlows({
@@ -115,11 +113,11 @@ export default function CashFlowPage() {
     const { mutate: updateCashFlow, isPending: isUpdating } = useUpdateCashFlow();
     const { mutate: deleteCashFlow, isPending: isDeleting } = useDeleteCashFlow();
 
-    // Reset editingId when dialog closes
+    // Reset editingItem when dialog closes
     const handleOpenChange = (open: boolean) => {
         setIsCreateOpen(open);
         if (!open) {
-            setEditingId(null);
+            setEditingItem(null);
             form.reset({
                 branchId: branch?.id,
                 transactionDate: new Date(),
@@ -156,8 +154,8 @@ export default function CashFlowPage() {
             transactionDate: values.transactionDate.toISOString(),
         };
 
-        if (editingId) {
-            updateCashFlow({ id: editingId, data: payload }, {
+        if (editingItem) {
+            updateCashFlow({ id: editingItem.id, data: payload }, {
                 onSuccess: () => {
                     handleOpenChange(false);
                     toast.success("Transaksi berhasil diperbarui");
@@ -182,23 +180,22 @@ export default function CashFlowPage() {
     };
 
     const handleEdit = (item: CashFlow) => {
-        setEditingId(item.id);
+        setEditingItem(item);
         setIsCreateOpen(true);
     };
 
     // Populate form when detail data arrives
     useEffect(() => {
-        if (editingId && cashFlowDetail?.data) {
-            const item = cashFlowDetail.data;
+        if (editingItem) {
             form.reset({
-                branchId: item.branchId,
-                transactionDate: new Date(item.transactionDate),
-                notes: item.notes,
-                amount: parseFloat(item.amount),
-                type: item.type,
+                branchId: editingItem.branchId,
+                transactionDate: new Date(editingItem.transactionDate),
+                notes: editingItem.notes,
+                amount: parseFloat(editingItem.amount),
+                type: editingItem.type,
             });
         }
-    }, [editingId, cashFlowDetail, form]);
+    }, [editingItem, form]);
 
     // Delete Logic
     const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -339,77 +336,70 @@ export default function CashFlowPage() {
             <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
                 <DialogContent className="max-w-md w-full">
                     <DialogHeader>
-                        <DialogTitle>{editingId ? "Edit Transaksi" : "Buat Transaksi Baru"}</DialogTitle>
+                        <DialogTitle>{editingItem ? "Edit Transaksi" : "Buat Transaksi Baru"}</DialogTitle>
                         <DialogDescription>
-                            {editingId ? "Perbarui informasi transaksi di bawah ini." : "Input detail transaksi arus kas."}
+                            {editingItem ? "Perbarui informasi transaksi di bawah ini." : "Input detail transaksi arus kas."}
                         </DialogDescription>
                     </DialogHeader>
 
-                    {editingId && isLoadingDetail ? (
-                        <div className="flex items-center justify-center py-8">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                            <span className="ml-2">Memuat data...</span>
-                        </div>
-                    ) : (
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <FormField control={form.control} name="transactionDate" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tanggal Transaksi</FormLabel>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <FormField control={form.control} name="transactionDate" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tanggal Transaksi</FormLabel>
+                                    <FormControl>
+                                        <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={e => field.onChange(new Date(e.target.value))} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <FormField control={form.control} name="type" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tipe Transaksi</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                         <FormControl>
-                                            <Input type="date" value={field.value ? format(field.value, "yyyy-MM-dd") : ""} onChange={e => field.onChange(new Date(e.target.value))} />
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih tipe" />
+                                            </SelectTrigger>
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                                        <SelectContent>
+                                            <SelectItem value="IN">KAS MASUK</SelectItem>
+                                            <SelectItem value="OUT">KAS KELUAR</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
 
-                                <FormField control={form.control} name="type" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tipe Transaksi</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Pilih tipe" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="IN">KAS MASUK</SelectItem>
-                                                <SelectItem value="OUT">KAS KELUAR</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                            <FormField control={form.control} name="amount" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Jumlah (Rp)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" min={0} {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
 
-                                <FormField control={form.control} name="amount" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Jumlah (Rp)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" min={0} {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                            <FormField control={form.control} name="notes" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Catatan</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="Contoh: Beli bensin, Donasi, dll." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
 
-                                <FormField control={form.control} name="notes" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Catatan</FormLabel>
-                                        <FormControl>
-                                            <Textarea placeholder="Contoh: Beli bensin, Donasi, dll." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-
-                                <div className="flex justify-end pt-4">
-                                    <Button type="submit" disabled={isCreating || isUpdating}>
-                                        {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Simpan
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    )}
+                            <div className="flex justify-end pt-4">
+                                <Button type="submit" disabled={isCreating || isUpdating}>
+                                    {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Simpan
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
                 </DialogContent>
             </Dialog>
 
