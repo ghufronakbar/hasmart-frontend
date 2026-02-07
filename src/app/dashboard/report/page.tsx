@@ -146,7 +146,7 @@ export default function ReportPage() {
                 params.append("branchId", branch.id.toString());
             }
 
-            const url = `${ENV.API_URL}/api${endpoint}?${params.toString()}`;
+            const url = `${ENV.API_URL}${endpoint}?${params.toString()}`;
 
             // 3. Open in new tab
             window.open(url, "_blank");
