@@ -646,23 +646,23 @@ export default function PointOfSalesPage() {
 
                                     return (
                                         <div key={field.id} className={cn("p-2 border-b flex gap-2 items-start hover:bg-muted/30 transition-colors", lastAddedIndex === index && "bg-blue-50/50")}>
-                                            <div className="flex-1 grid gap-1">
-                                                <div className="font-semibold text-sm leading-tight">{values.name || "Item Unknown"}</div>
-                                                <div className="text-xs text-muted-foreground flex flex-wrap gap-2 items-center">
+                                            <div className="flex flex-row gap-1 justify-between w-full items-center">
+                                                <div className="font-semibold text leading-tight">{values.name || "Item Unknown"}</div>
+                                                <div className=" flex flex-wrap gap-2 items-center">
                                                     {/* Variant Selector */}
                                                     {values.variants && values.variants.length > 1 ? (
                                                         <Select
                                                             value={values.masterItemVariantId?.toString()}
                                                             onValueChange={(val) => changeVariant(index, val)}
                                                         >
-                                                            <SelectTrigger className="h-6 text-[10px] px-2 font-normal w-auto min-w-[80px] border-dashed">
+                                                            <SelectTrigger className="h-6 text-sm px-2 font-normal w-auto min-w-[80px] border-dashed border-primary">
                                                                 <SelectValue placeholder="Variant" />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {values.variants.map((v: ItemVariant) => (
-                                                                    <SelectItem key={v.id} value={v.id.toString()} className="text-xs">
+                                                                    <SelectItem key={v.id} value={v.id.toString()} className="">
                                                                         <span className="font-medium">{v.unit}</span>
-                                                                        <span className="text-muted-foreground ml-1">
+                                                                        <span className="ml-1">
                                                                             (@{v.amount})
                                                                         </span>
                                                                     </SelectItem>
@@ -690,30 +690,16 @@ export default function PointOfSalesPage() {
                                                         ))}
                                                         <Button
                                                             variant="ghost"
-                                                            size="sm"
-                                                            className="h-5 px-1 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            className="h-5 px-1 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                                             onClick={() => addDiscount(index)}
                                                         >
                                                             <Plus className="h-3 w-3 mr-0.5" /> Disc %
                                                         </Button>
                                                     </div>
-                                                    {values.discounts && values.discounts.length > 0 && (
-                                                        <div className="flex gap-1 items-center animate-in fade-in zoom-in">
-                                                            {/* Inline Editing for NEWEST added discount? Or simple list? 
-                                                                 User asked for "langsung pada list". 
-                                                                 I rendered badges with X button above.
-                                                                 Let's also allow editing the last one if it's 0?
-                                                                 Actually, let's render Input fields if they are becoming editable.
-                                                                 
-                                                                 Better approach: Render inputs for all discounts inline.
-                                                             */}
-                                                        </div>
-                                                    )}
-                                                </div>
-
+                                                    
                                                 {/* Inline Discount Inputs */}
                                                 {values.discounts && values.discounts.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                    <div className="flex flex-wrap gap-1">
                                                         {values.discounts.map((discount, dIndex) => (
                                                             <div key={dIndex} className="relative flex w-16 items-center">
                                                                 <Input
@@ -727,13 +713,13 @@ export default function PointOfSalesPage() {
                                                         ))}
                                                     </div>
                                                 )}
+                                                </div>
+
                                             </div>
 
                                             {/* Qty & Price Controls */}
-                                            <div className="flex flex-col items-end gap-1">
-                                                <div className="font-mono font-medium text-right text-sm">
-                                                    {calc?.netTotal.toLocaleString("id-ID")}
-                                                </div>
+                                            <div className="flex flex-col items-end gap-1 mt-0.5">
+                                                
                                                 <div className="flex items-center gap-0.5 bg-background border rounded-md shadow-sm">
                                                     <Button
                                                         variant="ghost"
@@ -755,9 +741,13 @@ export default function PointOfSalesPage() {
                                                         <Plus className="h-3 w-3" />
                                                     </Button>
                                                 </div>
+                                                <div className="font-mono font-medium text-right mt-2">
+                                                    {calc?.netTotal.toLocaleString("id-ID")}
+                                                </div>
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-500 hover:bg-red-50" onClick={() => remove(index)}>
                                                     <Trash2 className="h-3 w-3" />
                                                 </Button>
+                                                
                                             </div>
                                         </div>
                                     )
