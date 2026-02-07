@@ -83,10 +83,6 @@ export const DailySalesReceipt = forwardRef<HTMLDivElement, DailySalesReceiptPro
                     <span>Total Retur</span>
                     <span>{formatCurrency(data.totalReturn)}</span>
                 </div>
-                <div className={styles.totalRow}>
-                    <span>Net Sales</span>
-                    <span>{formatCurrency(Number(data.totalAmount) - Number(data.totalReturn))}</span>
-                </div>
                 <div className={styles.row}>
                     <span>Kas Masuk</span>
                     <span>{formatCurrency(data.cashFlowIn)}</span>
@@ -94,6 +90,10 @@ export const DailySalesReceipt = forwardRef<HTMLDivElement, DailySalesReceiptPro
                 <div className={styles.row}>
                     <span>Kas Keluar</span>
                     <span>{formatCurrency(data.cashFlowOut)}</span>
+                </div>
+                <div className={styles.totalRow}>
+                    <span>Net Sales</span>
+                    <span>{formatCurrency(Number(data.totalAmount) - Number(data.totalReturn))}</span>
                 </div>
             </div>
 
