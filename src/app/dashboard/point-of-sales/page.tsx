@@ -63,6 +63,12 @@ import { useRouter } from "next/navigation";
 import { CreateMemberDialog } from "./components/create-member-dialog";
 import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 import { AxiosError } from "axios";
+import { useReactToPrint } from "react-to-print";
+import { DailySalesReceipt } from "@/components/custom/daily-sales-receipt";
+import { Receipt } from "@/components/custom/receipt";
+import { receiptService } from "@/services/report/receipt.service";
+import { SalesReceipt, ReceiptData } from "@/types/report/receipt";
+import { Copy, Printer } from "lucide-react";
 
 // --- Schema (Mirrors SalesPage but streamlined) ---
 const discountSchema = z.object({
@@ -114,6 +120,52 @@ export default function PointOfSalesPage() {
     const [isScanning, setIsScanning] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const barcodeInputRef = useRef<HTMLInputElement>(null);
+
+    // --- Daily Receipt ---
+    const dailyReceiptRef = useRef<HTMLDivElement>(null);
+    const [dailyReceiptData, setDailyReceiptData] = useState<SalesReceipt | null>(null);
+    const [isPrintingDaily, setIsPrintingDaily] = useState(false);
+
+    const handlePrintDaily = useReactToPrint({
+        contentRef: dailyReceiptRef,
+    });
+
+    // --- Transaction Receipt ---
+    const transactionReceiptRef = useRef<HTMLDivElement>(null);
+    const [transactionReceiptData, setTransactionReceiptData] = useState<ReceiptData | null>(null);
+    const [isPrintingTransaction, setIsPrintingTransaction] = useState(false);
+
+    const handlePrintTransaction = useReactToPrint({
+        contentRef: transactionReceiptRef,
+        documentTitle: `Struk-${new Date().getTime()}`,
+        onAfterPrint: () => setTransactionReceiptData(null),
+    });
+
+    const handleFetchAndPrintDaily = async () => {
+        if (!branch?.id) return;
+        setIsPrintingDaily(true);
+        try {
+            const res = await receiptService.getDailySales({
+                date: new Date(),
+                branchId: branch.id,
+            });
+            if (res.data) {
+                setDailyReceiptData(res.data);
+                // Wait for state update and render
+                setTimeout(() => {
+                    handlePrintDaily();
+                    setIsPrintingDaily(false);
+                }, 500);
+            } else {
+                toast.error("Data tidak ditemukan");
+                setIsPrintingDaily(false);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Gagal memuat laporan harian");
+            setIsPrintingDaily(false);
+        }
+    };
 
     // --- Queries ---
     const { data: items } = useItems({
@@ -431,7 +483,7 @@ export default function PointOfSalesPage() {
     }, [watchedItems]);
 
     // Submit
-    const onSubmit = (values: CreateSalesFormValues) => {
+    const onSubmit = (values: CreateSalesFormValues, shouldPrint = false) => {
         // Validation: Verify Cash Received
         if (values.cashReceived < calculations.grandTotal) {
             toast.error("Uang diterima kurang dari total transaksi!");
@@ -453,13 +505,33 @@ export default function PointOfSalesPage() {
         };
 
         createSales(payload, {
-            onSuccess: () => {
+            onSuccess: async (data) => {
+                const salesId = data?.data?.id;
+
+                if (shouldPrint && salesId) {
+                    setIsPrintingTransaction(true);
+                    try {
+                        const res = await receiptService.get("sales", salesId);
+                        if (res.data) {
+                            setTransactionReceiptData(res.data);
+                            // Wait for render
+                            setTimeout(() => {
+                                handlePrintTransaction();
+                                setIsPrintingTransaction(false);
+                            }, 500);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        toast.error("Gagal memuat struk untuk dicetak");
+                        setIsPrintingTransaction(false);
+                    }
+                }
+
                 form.reset({
                     branchId: branch?.id || 0,
                     notes: "",
                     items: [],
                     memberCode: "",
-                    // transactionDate: new Date(), // removed duplicate
                     transactionDate: new Date(),
                     cashReceived: 0,
                     paymentType: "CASH",
@@ -536,7 +608,13 @@ export default function PointOfSalesPage() {
                             </div>
                         </div>
                         <div className="w-fit">
-                            <Button className="w-fit">
+                            <Button
+                                className="w-fit"
+                                variant="outline"
+                                onClick={handleFetchAndPrintDaily}
+                                disabled={isPrintingDaily}
+                            >
+                                {isPrintingDaily ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
                                 Cetak Laporan Hari Ini
                             </Button>
                         </div>
@@ -840,15 +918,41 @@ export default function PointOfSalesPage() {
                                     <AlertDialogCancel>Batal</AlertDialogCancel>
                                     <AlertDialogAction onClick={(e) => {
                                         e.preventDefault(); // Prevent auto-close
-                                        form.handleSubmit(onSubmit)();
-                                    }}>
-                                        Bayar Sekarang
+                                        form.handleSubmit((values) => onSubmit(values, false))();
+                                    }}
+                                        className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+
+                                    >
+                                        Bayar Saja
+                                    </AlertDialogAction>
+                                    <AlertDialogAction
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            form.handleSubmit((values) => onSubmit(values, true))();
+                                        }}
+                                        disabled={isPrintingTransaction}
+                                    >
+                                        {isPrintingTransaction ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                                        Bayar & Cetak
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
                     </CardFooter>
                 </Card>
+            </div>
+            {/* Hidden Receipt for Daily Report Printing */}
+            <div style={{ display: "none" }}>
+                {dailyReceiptData && (
+                    <DailySalesReceipt ref={dailyReceiptRef} data={dailyReceiptData} />
+                )}
+            </div>
+
+            {/* Hidden Receipt for Transaction Printing */}
+            <div style={{ display: "none" }}>
+                {transactionReceiptData && (
+                    <Receipt ref={transactionReceiptRef} data={transactionReceiptData} />
+                )}
             </div>
         </div >
     );
