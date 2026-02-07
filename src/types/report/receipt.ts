@@ -28,3 +28,27 @@ export interface ReceiptData {
 }
 
 export type ReceiptResponse = BaseResponse<ReceiptData>;
+
+export interface SalesReceipt {
+  branch: {
+    id: number;
+    code: string;
+    name: string;
+    phone?: string | null;
+    address?: string | null;
+  };
+  date: string;
+  cashierName: string;
+  totalTransaction: number;
+  totalAmount: string; // serialized Decimal
+  totalReturn: string; // serialized Decimal
+  paymentType: {
+    CASH: string;
+    DEBIT: string;
+    QRIS: string;
+  };
+  cashIncome: string; // serialized Decimal
+  balance: string; // serialized Decimal
+}
+
+export type SalesReceiptResponse = BaseResponse<SalesReceipt>;

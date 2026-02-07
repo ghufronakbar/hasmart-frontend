@@ -3,7 +3,7 @@
 
 
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray, useWatch, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -120,6 +120,7 @@ import { AutocompleteInput } from "@/components/custom/autocomplete-input";
 import { ActionBranchButton } from "@/components/custom/action-branch-button";
 import { useModEnter } from "@/hooks/function/use-mod-enter";
 import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
+import { itemService } from "@/services";
 
 type CreatePurchaseFormValues = z.infer<typeof createPurchaseSchema>;
 type PurchaseItemFormValues = z.infer<typeof purchaseItemSchema>;
@@ -138,6 +139,9 @@ export default function PurchasePage() {
     }]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const debouncedSearch = useDebounce(searchTerm, 500);
+    const [isScanning, setIsScanning] = useState(false);
+    const barcodeInputRef = useRef<HTMLInputElement>(null);
+    const [scannedItems, setScannedItems] = useState<Item[]>([]);
 
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -191,12 +195,12 @@ export default function PurchasePage() {
 
 
 
-    // Merge list items with detail items to ensure selected items are in the options list
+    // Merge list items with set details and scanned items to ensure selected items are in the options list
     const itemOptions = useMemo(() => {
         const listItems = items?.data || [];
-        if (!editingId || !purchaseDetail?.data) return listItems;
+        // if (!editingId || !purchaseDetail?.data) return listItems; // scannedItems might exist even if not editing
 
-        const detailItems = purchaseDetail.data.items?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
+        const detailItems = purchaseDetail?.data?.items?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
 
         // Use Map to deduplicate by ID
         const map = new Map();
@@ -204,11 +208,14 @@ export default function PurchasePage() {
         detailItems.forEach(i => {
             if (i && i.id) map.set(i.id, i);
         });
+        scannedItems.forEach(i => {
+            if (i && i.id) map.set(i.id, i);
+        });
 
         const merged = Array.from(map.values());
         console.log("DEBUG: merged itemOptions count", merged.length);
         return merged;
-    }, [items?.data, purchaseDetail, editingId]);
+    }, [items?.data, purchaseDetail, editingId, scannedItems]);
 
     const { mutate: createPurchase, isPending: isCreating } = useCreatePurchase();
     const { mutate: updatePurchase, isPending: isUpdating } = useUpdatePurchase();
@@ -465,6 +472,89 @@ export default function PurchasePage() {
         enabled: true,
     });
 
+    // Handle Barcode Scan
+    const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            const code = e.currentTarget.value.trim();
+            if (!code) return;
+
+            e.preventDefault(); // Prevent form submission
+            e.currentTarget.value = ""; // Clear immediately
+            setIsScanning(true);
+
+            try {
+                // Fetch Item by Code
+                const res = await itemService.getItemByCode(code);
+
+                if (res.data) {
+                    const item = res.data;
+
+                    if (!item.isActive) {
+                        toast.error("Item tidak aktif");
+                        return;
+                    }
+
+                    // Get base unit variant or first
+                    const baseVariant = item.masterItemVariants.find(v => v.isBaseUnit)
+                        || item.masterItemVariants[0];
+
+                    if (!baseVariant) {
+                        toast.error("Item tidak memiliki variant");
+                        return;
+                    }
+
+                    // Add to scannedItems so it appears in Combobox options
+                    setScannedItems(prev => {
+                        if (prev.find(i => i.id === item.id)) return prev;
+                        return [...prev, item];
+                    });
+
+                    // Check if item already exists in list (same item & variant)
+                    const currentItems = form.getValues("items");
+                    const existingIndex = currentItems.findIndex(
+                        line => line.masterItemId === item.id && line.masterItemVariantId === baseVariant.id
+                    );
+
+                    if (existingIndex >= 0) {
+                        // Update Qty
+                        const existingItem = currentItems[existingIndex];
+                        const newQty = Number(existingItem.qty) + 1;
+                        form.setValue(`items.${existingIndex}.qty`, newQty);
+
+                        // Highlight/Focus existing row?
+                        setLastAddedIndex(existingIndex);
+                        toast.success(`${item.name} (+1)`);
+                    } else {
+                        // Append new item
+                        // Use recordedBuyPrice if available on item (mapped from backend), else 0
+                        const itemWithPrice = item as { recordedBuyPrice?: string };
+                        const buyPrice = itemWithPrice.recordedBuyPrice ? parseFloat(itemWithPrice.recordedBuyPrice) : 0;
+
+                        append({
+                            masterItemId: item.id,
+                            masterItemVariantId: baseVariant.id, // Use baseVariant.id, NOT item.masterItemVariants[0].id
+                            qty: 1,
+                            purchasePrice: buyPrice,
+                            discounts: [],
+                        });
+                        setLastAddedIndex(fields.length); // length will be index of new item
+                        toast.success(`${item.name} ditambahkan`);
+                    }
+
+                } else {
+                    toast.error("Item tidak ditemukan");
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error("Kode tidak ditemukan atau terjadi kesalahan");
+            } finally {
+                setIsScanning(false);
+                // Keep focus
+                barcodeInputRef.current?.focus();
+            }
+        }
+    };
+
 
     // Delete Logic
     const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -710,7 +800,21 @@ export default function PurchasePage() {
                                     {/* Items Section */}
                                     <div>
                                         <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-lg font-semibold">Item Barang</h3>
+                                            <div className="flex flex-col items-start gap-2">
+                                                <h3 className="text-lg font-semibold">Item Barang</h3>
+                                                <div className="relative">
+                                                    <Input
+                                                        ref={barcodeInputRef}
+                                                        placeholder="Scan Barcode / Ketik Kode Variant lalu Enter..."
+                                                        className="h-10 text-sm font-mono border-primary/50 focus-visible:ring-primary pl-9"
+                                                        onKeyDown={handleScan}
+                                                        disabled={isScanning}
+                                                    />
+                                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                                        {isScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div className="flex flex-col items-end gap-2">
                                                 <Button type="button" size="sm" onClick={handleNewItem}>
                                                     <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
@@ -718,6 +822,9 @@ export default function PurchasePage() {
                                                 <span className="text-xs text-muted-foreground">Atau tekan Ctrl+Enter</span>
                                             </div>
                                         </div>
+
+                                        {/* Barcode Scanner Input */}
+
 
                                         <div className="space-y-4">
                                             {fields.map((field, index) => {

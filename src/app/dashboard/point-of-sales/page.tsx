@@ -63,6 +63,12 @@ import { useRouter } from "next/navigation";
 import { CreateMemberDialog } from "./components/create-member-dialog";
 import { useAccessControl, UserAccess } from "@/hooks/use-access-control";
 import { AxiosError } from "axios";
+import { useReactToPrint } from "react-to-print";
+import { DailySalesReceipt } from "@/components/custom/daily-sales-receipt";
+import { Receipt } from "@/components/custom/receipt";
+import { receiptService } from "@/services/report/receipt.service";
+import { SalesReceipt, ReceiptData } from "@/types/report/receipt";
+import { Copy, Printer } from "lucide-react";
 
 // --- Schema (Mirrors SalesPage but streamlined) ---
 const discountSchema = z.object({
@@ -91,6 +97,7 @@ const createSalesSchema = z.object({
     items: z.array(salesItemSchema).min(1, "Belum ada item di keranjang"),
     transactionDate: z.date(),
     cashReceived: z.coerce.number().min(0, "Jumlah tidak boleh minus"),
+    paymentType: z.enum(["CASH", "DEBIT", "QRIS"]),
 });
 
 type CreateSalesFormValues = z.infer<typeof createSalesSchema>;
@@ -113,6 +120,52 @@ export default function PointOfSalesPage() {
     const [isScanning, setIsScanning] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const barcodeInputRef = useRef<HTMLInputElement>(null);
+
+    // --- Daily Receipt ---
+    const dailyReceiptRef = useRef<HTMLDivElement>(null);
+    const [dailyReceiptData, setDailyReceiptData] = useState<SalesReceipt | null>(null);
+    const [isPrintingDaily, setIsPrintingDaily] = useState(false);
+
+    const handlePrintDaily = useReactToPrint({
+        contentRef: dailyReceiptRef,
+    });
+
+    // --- Transaction Receipt ---
+    const transactionReceiptRef = useRef<HTMLDivElement>(null);
+    const [transactionReceiptData, setTransactionReceiptData] = useState<ReceiptData | null>(null);
+    const [isPrintingTransaction, setIsPrintingTransaction] = useState(false);
+
+    const handlePrintTransaction = useReactToPrint({
+        contentRef: transactionReceiptRef,
+        documentTitle: `Struk-${new Date().getTime()}`,
+        onAfterPrint: () => setTransactionReceiptData(null),
+    });
+
+    const handleFetchAndPrintDaily = async () => {
+        if (!branch?.id) return;
+        setIsPrintingDaily(true);
+        try {
+            const res = await receiptService.getDailySales({
+                date: new Date(),
+                branchId: branch.id,
+            });
+            if (res.data) {
+                setDailyReceiptData(res.data);
+                // Wait for state update and render
+                setTimeout(() => {
+                    handlePrintDaily();
+                    setIsPrintingDaily(false);
+                }, 500);
+            } else {
+                toast.error("Data tidak ditemukan");
+                setIsPrintingDaily(false);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Gagal memuat laporan harian");
+            setIsPrintingDaily(false);
+        }
+    };
 
     // --- Queries ---
     const { data: items } = useItems({
@@ -138,6 +191,7 @@ export default function PointOfSalesPage() {
             memberCode: "",
             transactionDate: new Date(),
             cashReceived: 0,
+            paymentType: "CASH",
         },
     });
 
@@ -429,7 +483,7 @@ export default function PointOfSalesPage() {
     }, [watchedItems]);
 
     // Submit
-    const onSubmit = (values: CreateSalesFormValues) => {
+    const onSubmit = (values: CreateSalesFormValues, shouldPrint = false) => {
         // Validation: Verify Cash Received
         if (values.cashReceived < calculations.grandTotal) {
             toast.error("Uang diterima kurang dari total transaksi!");
@@ -447,10 +501,32 @@ export default function PointOfSalesPage() {
                 discounts: i.discounts
             })),
             cashReceived: values.cashReceived,
+            paymentType: values.paymentType,
         };
 
         createSales(payload, {
-            onSuccess: () => {
+            onSuccess: async (data) => {
+                const salesId = data?.data?.id;
+
+                if (shouldPrint && salesId) {
+                    setIsPrintingTransaction(true);
+                    try {
+                        const res = await receiptService.get("sales", salesId);
+                        if (res.data) {
+                            setTransactionReceiptData(res.data);
+                            // Wait for render
+                            setTimeout(() => {
+                                handlePrintTransaction();
+                                setIsPrintingTransaction(false);
+                            }, 500);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        toast.error("Gagal memuat struk untuk dicetak");
+                        setIsPrintingTransaction(false);
+                    }
+                }
+
                 form.reset({
                     branchId: branch?.id || 0,
                     notes: "",
@@ -458,6 +534,7 @@ export default function PointOfSalesPage() {
                     memberCode: "",
                     transactionDate: new Date(),
                     cashReceived: 0,
+                    paymentType: "CASH",
                 });
                 setMemberVerified(null);
                 setSearchItem("");
@@ -484,49 +561,62 @@ export default function PointOfSalesPage() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-80px)] overflow-hidden gap-4 p-2 bg-muted/20 -m-4 sm:p-4">
+        <div className="flex lg:flex-row flex-col h-[calc(100vh-80px)] overflow-hidden gap-4 p-2 bg-muted/20 -m-4 sm:p-4">
 
             {/* LEFT: Cart / Items */}
             <div className="flex-1 flex flex-col gap-4 min-w-0">
                 {/* Header / Search */}
                 <Card className="flex-none p-4">
-                    <div className="flex flex-col gap-4">
-                        {/* Barcode Scanner Input */}
-                        <div className="relative">
-                            <Input
-                                ref={barcodeInputRef}
-                                placeholder="Scan Barcode / Ketik Kode Variant lalu Enter..."
-                                className="h-12 text-lg font-mono border-primary/50 focus-visible:ring-primary pl-10"
-                                onKeyDown={handleScan}
-                                autoFocus
-                                disabled={isScanning}
-                            />
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                {isScanning ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex flex-col gap-4 w-full">
+                            {/* Barcode Scanner Input */}
+                            <div className="relative">
+                                <Input
+                                    ref={barcodeInputRef}
+                                    placeholder="Scan Barcode / Ketik Kode Variant lalu Enter..."
+                                    className="h-12 text-lg font-mono border-primary/50 focus-visible:ring-primary pl-10"
+                                    onKeyDown={handleScan}
+                                    autoFocus
+                                    disabled={isScanning}
+                                />
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    {isScanning ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <Combobox
+                                        value={0} // Always reset
+                                        onChange={handleAddItem}
+                                        options={itemsList.map(i => ({ id: i.id, name: i.name }))} // Simplified options
+                                        placeholder="Cari Nama Barang (Manual Search)..."
+                                        className="w-full h-10"
+                                        inputValue={searchItem}
+                                        onInputChange={setSearchItem}
+                                        renderLabel={(item) => (
+                                            <div className="flex flex-col text-left">
+                                                <span className="font-semibold">{item.name}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {/* Show base price or variant count? */}
+                                                    Variasi: {itemsList.find(iList => iList.id === item.id)?.masterItemVariants?.length || 0}
+                                                </span>
+                                            </div>
+                                        )}
+                                    />
+                                </div>
                             </div>
                         </div>
-
-                        <div className="flex gap-4">
-                            <div className="flex-1">
-                                <Combobox
-                                    value={0} // Always reset
-                                    onChange={handleAddItem}
-                                    options={itemsList.map(i => ({ id: i.id, name: i.name }))} // Simplified options
-                                    placeholder="Cari Nama Barang (Manual Search)..."
-                                    className="w-full h-10"
-                                    inputValue={searchItem}
-                                    onInputChange={setSearchItem}
-                                    renderLabel={(item) => (
-                                        <div className="flex flex-col text-left">
-                                            <span className="font-semibold">{item.name}</span>
-                                            <span className="text-xs text-muted-foreground">
-                                                {/* Show base price or variant count? */}
-                                                Variasi: {itemsList.find(iList => iList.id === item.id)?.masterItemVariants?.length || 0}
-                                            </span>
-                                        </div>
-                                    )}
-                                />
-                            </div>
+                        <div className="w-fit">
+                            <Button
+                                className="w-fit"
+                                variant="outline"
+                                onClick={handleFetchAndPrintDaily}
+                                disabled={isPrintingDaily}
+                            >
+                                {isPrintingDaily ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+                                Cetak Laporan Hari Ini
+                            </Button>
                         </div>
                     </div>
                 </Card>
@@ -669,7 +759,7 @@ export default function PointOfSalesPage() {
             </div>
 
             {/* RIGHT: Summary & Sidebar */}
-            <div className="w-[320px] md:w-[380px] lg:w-[420px] flex-none flex flex-col gap-4 overflow-hidden">
+            <div className="w-full lg:w-[420px] flex-none flex flex-col gap-4 overflow-hidden">
 
                 {/* Member Card */}
                 <Card className="flex-none">
@@ -761,6 +851,22 @@ export default function PointOfSalesPage() {
                                     {...form.register("cashReceived")}
                                 />
                             </div>
+                            <div className="space-y-1">
+                                <span className="text-xs font-medium text-muted-foreground">Metode Bayar</span>
+                                <Select
+                                    onValueChange={(val) => form.setValue("paymentType", val as "CASH" | "DEBIT" | "QRIS")}
+                                    defaultValue={form.watch("paymentType")}
+                                >
+                                    <SelectTrigger className="w-full text-right font-bold h-10">
+                                        <SelectValue placeholder="Pilih Metode" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="CASH">CASH</SelectItem>
+                                        <SelectItem value="DEBIT">DEBIT</SelectItem>
+                                        <SelectItem value="QRIS">QRIS</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div className="flex justify-between items-end bg-blue-50 p-2 rounded">
                                 <div className="text-sm font-medium text-blue-800">Kembalian</div>
                                 <div className="text-lg font-bold text-blue-600">
@@ -802,15 +908,41 @@ export default function PointOfSalesPage() {
                                     <AlertDialogCancel>Batal</AlertDialogCancel>
                                     <AlertDialogAction onClick={(e) => {
                                         e.preventDefault(); // Prevent auto-close
-                                        form.handleSubmit(onSubmit)();
-                                    }}>
-                                        Bayar Sekarang
+                                        form.handleSubmit((values) => onSubmit(values, false))();
+                                    }}
+                                        className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+
+                                    >
+                                        Bayar Saja
+                                    </AlertDialogAction>
+                                    <AlertDialogAction
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            form.handleSubmit((values) => onSubmit(values, true))();
+                                        }}
+                                        disabled={isPrintingTransaction}
+                                    >
+                                        {isPrintingTransaction ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                                        Bayar & Cetak
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
                     </CardFooter>
                 </Card>
+            </div>
+            {/* Hidden Receipt for Daily Report Printing */}
+            <div style={{ display: "none" }}>
+                {dailyReceiptData && (
+                    <DailySalesReceipt ref={dailyReceiptRef} data={dailyReceiptData} />
+                )}
+            </div>
+
+            {/* Hidden Receipt for Transaction Printing */}
+            <div style={{ display: "none" }}>
+                {transactionReceiptData && (
+                    <Receipt ref={transactionReceiptRef} data={transactionReceiptData} />
+                )}
             </div>
         </div >
     );

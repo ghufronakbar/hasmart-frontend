@@ -90,11 +90,11 @@ import { useItemBulkUpdateVariantPrice } from "@/hooks/master/use-item";
 
 const variantSchema = z.object({
     id: z.number().optional(), // For edit
-    unit: z.string().min(1, "Satuan wajib"),
-    amount: z.coerce.number().min(1, "Jumlah konversi min 1"),
+    unit: z.string().optional(),
+    amount: z.coerce.number().optional(),
     buyPrice: z.coerce.number().optional(), // hanya untuk display
     profitPercentage: z.coerce.number().optional(), // TODO: sementara display
-    sellPrice: z.coerce.number().min(0, "Harga jual min 0"),
+    sellPrice: z.coerce.number().optional(),
     isBaseUnit: z.boolean().default(false),
     action: z.enum(["create", "update", "delete"]).default("create"),
 });
@@ -105,16 +105,20 @@ const createItemSchema = z.object({
     masterSupplierCode: z.string().min(1, "Supplier wajib"),
     masterItemCategoryCode: z.string().min(1, "Kategori wajib"),
     isActive: z.boolean().default(true),
-    buyPrice: z.coerce.number().optional(), // TODO: sementara display
+    buyPrice: z.coerce.number().optional(),
     masterItemVariants: z.array(variantSchema)
         .min(1, "Minimal 1 variant wajib")
         .refine((variants) => {
-            const baseUnits = variants.filter(v => v.amount === 1);
+            // Filter valid variants first (must have unit and amount)
+            const validVariants = variants.filter(v => v.unit && v.amount);
+            const baseUnits = validVariants.filter(v => v.amount === 1);
             return baseUnits.length <= 1;
         }, "Hanya boleh ada satu variant dengan konversi 1 (Base Unit).")
-        .refine(() => {
-            return true;
-        }),
+        .refine((variants) => {
+            // Filter valid variants first
+            const validVariants = variants.filter(v => v.unit && v.amount);
+            return validVariants.length > 0;
+        }, "Minimal harus ada satu variant valid"),
 });
 
 
@@ -444,12 +448,22 @@ export default function ItemsPage() {
 
         const processedVariants = values.masterItemVariants
             .filter(v => {
+                // Determine if valid: needs unit and amount
+                const isValid = v.unit && v.amount;
+                // If invalid and new (create), ignore it. 
+                // If invalid and existing (update/delete), we might have an issue, but let's assume we ignore invalid new ones.
+                if (!isValid && !v.id) return false;
+
                 // If it's a new item (no id) and marked deleted, don't send it.
                 if (!v.id && v.action === 'delete') return false;
                 return true;
             })
             .map(v => ({
                 ...v,
+                // Cast to required types for backend (now that we filtered invalid ones)
+                unit: v.unit!,
+                amount: v.amount || 0,
+                sellPrice: v.sellPrice || 0,
                 isBaseUnit: v.amount === 1,
                 // Ensure action is set. 
                 // For legacy safety: if there's an ID, default action is update. If no ID, create.
@@ -1010,8 +1024,8 @@ export default function ItemsPage() {
                                                                     <FormLabel className="text-xs">Satuan</FormLabel>
                                                                     <div className="w-full">
                                                                         <AutocompleteInput
-                                                                            value={field.value}
-                                                                            onChange={field.onChange}
+                                                                            value={(field.value || "").toUpperCase()}
+                                                                            onChange={(e) => field.onChange(e.toUpperCase())}
                                                                             options={units?.data?.map(u => ({ id: u.id, name: u.unit, code: u.unit })) || []}
                                                                             onSearch={setSearchUnit}
                                                                             placeholder="Pilih/Ketik"

@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   title: "Hasmart",
   description: "Hasmart | Dashboard",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export const viewport: Viewport = {
