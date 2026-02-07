@@ -66,6 +66,7 @@ import { AxiosError } from "axios";
 import { useReactToPrint } from "react-to-print";
 import { DailySalesReceipt } from "@/components/custom/daily-sales-receipt";
 import { Receipt } from "@/components/custom/receipt";
+import { CashFlowDialog } from "./components/cash-flow-dialog";
 import { receiptService } from "@/services/report/receipt.service";
 import { SalesReceipt, ReceiptData } from "@/types/report/receipt";
 import { Copy, Printer } from "lucide-react";
@@ -140,6 +141,9 @@ export default function PointOfSalesPage() {
         documentTitle: `Struk-${new Date().getTime()}`,
         onAfterPrint: () => setTransactionReceiptData(null),
     });
+
+    // --- Cash Flow Dialog ---
+    const [isCashFlowOpen, setIsCashFlowOpen] = useState(false);
 
     const handleFetchAndPrintDaily = async () => {
         if (!branch?.id) return;
@@ -617,9 +621,18 @@ export default function PointOfSalesPage() {
                                 {isPrintingDaily ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
                                 Cetak Laporan Hari Ini
                             </Button>
+                            <Button
+                                className="w-full mt-2"
+                                variant="outline"
+                                onClick={() => setIsCashFlowOpen(true)}
+                            >
+                                Arus Kas
+                            </Button>
                         </div>
                     </div>
                 </Card>
+
+                <CashFlowDialog open={isCashFlowOpen} onOpenChange={setIsCashFlowOpen} />
 
                 {/* Items List */}
                 <Card className="flex-1 overflow-hidden flex flex-col">
@@ -696,30 +709,30 @@ export default function PointOfSalesPage() {
                                                             <Plus className="h-3 w-3 mr-0.5" /> Disc %
                                                         </Button>
                                                     </div>
-                                                    
-                                                {/* Inline Discount Inputs */}
-                                                {values.discounts && values.discounts.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {values.discounts.map((discount, dIndex) => (
-                                                            <div key={dIndex} className="relative flex w-16 items-center">
-                                                                <Input
-                                                                    className="h-6 text-xs pr-4 px-1 text-center"
-                                                                    value={discount.percentage}
-                                                                    onChange={(e) => updateDiscount(index, dIndex, e.target.value)}
-                                                                    autoFocus={discount.percentage === 0}
-                                                                />
-                                                                <span className="absolute right-1 text-[10px] text-muted-foreground">%</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
+
+                                                    {/* Inline Discount Inputs */}
+                                                    {values.discounts && values.discounts.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {values.discounts.map((discount, dIndex) => (
+                                                                <div key={dIndex} className="relative flex w-16 items-center">
+                                                                    <Input
+                                                                        className="h-6 text-xs pr-4 px-1 text-center"
+                                                                        value={discount.percentage}
+                                                                        onChange={(e) => updateDiscount(index, dIndex, e.target.value)}
+                                                                        autoFocus={discount.percentage === 0}
+                                                                    />
+                                                                    <span className="absolute right-1 text-[10px] text-muted-foreground">%</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                             </div>
 
                                             {/* Qty & Price Controls */}
                                             <div className="flex flex-col items-end gap-1 mt-0.5">
-                                                
+
                                                 <div className="flex items-center gap-0.5 bg-background border rounded-md shadow-sm">
                                                     <Button
                                                         variant="ghost"
@@ -747,7 +760,7 @@ export default function PointOfSalesPage() {
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-500 hover:bg-red-50" onClick={() => remove(index)}>
                                                     <Trash2 className="h-3 w-3" />
                                                 </Button>
-                                                
+
                                             </div>
                                         </div>
                                     )

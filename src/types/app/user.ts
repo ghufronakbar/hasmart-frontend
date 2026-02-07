@@ -48,6 +48,8 @@ export interface User {
   accessTransactionTransferWrite: boolean;
   accessTransactionAdjustmentRead: boolean;
   accessTransactionAdjustmentWrite: boolean;
+  accessTransactionCashFlowRead: boolean;
+  accessTransactionCashFlowWrite: boolean;
 }
 
 export interface LoginDTO {
@@ -100,6 +102,8 @@ export interface CreateUserDTO {
   accessTransactionTransferWrite?: boolean;
   accessTransactionAdjustmentRead?: boolean;
   accessTransactionAdjustmentWrite?: boolean;
+  accessTransactionCashFlowRead?: boolean;
+  accessTransactionCashFlowWrite?: boolean;
 }
 
 export interface UpdateUserAccessDTO {
@@ -142,6 +146,8 @@ export interface UpdateUserAccessDTO {
   accessTransactionTransferWrite: boolean;
   accessTransactionAdjustmentRead: boolean;
   accessTransactionAdjustmentWrite: boolean;
+  accessTransactionCashFlowRead: boolean;
+  accessTransactionCashFlowWrite: boolean;
 }
 
 export interface ResetPasswordDTO {

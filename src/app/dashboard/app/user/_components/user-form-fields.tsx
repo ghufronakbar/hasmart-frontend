@@ -58,6 +58,7 @@ const GROUPS = {
             "accessTransactionSellReturnRead",
             "accessTransactionTransferRead",
             "accessTransactionAdjustmentRead",
+            "accessTransactionCashFlowRead",
         ],
         write: [
             "accessTransactionPurchaseWrite",
@@ -68,6 +69,7 @@ const GROUPS = {
             "accessTransactionSellReturnWrite",
             "accessTransactionTransferWrite",
             "accessTransactionAdjustmentWrite",
+            "accessTransactionCashFlowWrite",
         ],
     },
 };
@@ -235,6 +237,8 @@ export function UserFormFields({ mode, form }: UserFormFieldsProps) {
                         <AccessCheckbox form={form} name="accessTransactionTransferWrite" label="Kelola Transfer Stok" />
                         <AccessCheckbox form={form} name="accessTransactionAdjustmentRead" label="Lihat Penyesuaian Stok" />
                         <AccessCheckbox form={form} name="accessTransactionAdjustmentWrite" label="Kelola Penyesuaian Stok" />
+                        <AccessCheckbox form={form} name="accessTransactionCashFlowRead" label="Lihat Arus Kas" />
+                        <AccessCheckbox form={form} name="accessTransactionCashFlowWrite" label="Kelola Arus Kas" />
                     </div>
                 </div>
             </div>

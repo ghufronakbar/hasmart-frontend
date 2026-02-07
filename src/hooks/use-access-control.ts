@@ -43,6 +43,8 @@ export enum UserAccess {
   accessTransactionTransferWrite = "accessTransactionTransferWrite",
   accessTransactionAdjustmentRead = "accessTransactionAdjustmentRead",
   accessTransactionAdjustmentWrite = "accessTransactionAdjustmentWrite",
+  accessTransactionCashFlowRead = "accessTransactionCashFlowRead",
+  accessTransactionCashFlowWrite = "accessTransactionCashFlowWrite",
 }
 
 export const useAccessControl = (access: UserAccess[], redirect: boolean) => {

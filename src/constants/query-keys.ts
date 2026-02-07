@@ -143,6 +143,13 @@ export const queryKeys = {
       detail: (id: number | string) =>
         [...queryKeys.transaction.transfers.all, "detail", id] as const,
     },
+    cashFlow: {
+      all: ["transaction", "cash-flow"] as const,
+      list: (params?: unknown) =>
+        [...queryKeys.transaction.cashFlow.all, "list", params] as const,
+      detail: (id: number | string) =>
+        [...queryKeys.transaction.cashFlow.all, "detail", id] as const,
+    },
   },
   overview: {
     all: ["overview"] as const,
@@ -212,6 +219,7 @@ export const invalidationMap = {
     sell: () => [queryKeys.transaction.sell.all],
     sellReturn: () => [queryKeys.transaction.sellReturn.all],
     transfer: () => [queryKeys.transaction.transfers.all],
+    cashFlow: () => [queryKeys.transaction.cashFlow.all],
   },
   stock: {
     frontStock: {
