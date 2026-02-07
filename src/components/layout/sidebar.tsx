@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -79,7 +80,7 @@ export function Sidebar() {
                 <div className={cn("flex h-14 items-center border-b px-4 lg:h-[60px]", isExpanded ? "justify-between" : "justify-center")}>
                     {isExpanded && (
                         <Link href="/" className="flex items-center gap-2 font-semibold truncate">
-                            Hasmart
+                            <Image src="/hasmart logo.png" alt="Logo" width={100} height={50} />
                         </Link>
                     )}
                     <Button
@@ -167,7 +168,7 @@ function SidebarItem({ item, pathname, isExpanded }: { item: MenuItem; pathname:
                                 href={child.href || "#"}
                                 className={cn(
                                     "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-xs",
-                                    pathname === child.href && "bg-muted text-primary font-medium"
+                                    pathname === child.href && "bg-secondary text-primary font-medium"
                                 )}
                             >
                                 <span className="truncate">{child.title}</span>
