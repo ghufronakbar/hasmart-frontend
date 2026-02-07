@@ -52,6 +52,15 @@ export function useCreateSales() {
       invalidationMap.master.item().forEach((key) => {
         queryClient.invalidateQueries({ queryKey: key });
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.master.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.list(),
+      });
     },
   });
 }
@@ -73,6 +82,15 @@ export function useUpdateSales() {
       invalidationMap.master.item().forEach((key) => {
         queryClient.invalidateQueries({ queryKey: key });
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.master.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.list(),
+      });
     },
   });
 }
@@ -89,6 +107,16 @@ export function useDeleteSales() {
       // Invalidate items for stock refresh
       invalidationMap.master.item().forEach((key) => {
         queryClient.invalidateQueries({ queryKey: key });
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.master.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.stock.frontStock.items.list(),
       });
     },
   });

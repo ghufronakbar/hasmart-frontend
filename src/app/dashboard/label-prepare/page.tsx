@@ -173,6 +173,32 @@ export default function LabelPreparePage() {
                                     <ArrowUpDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </TableHead>
+                            <TableHead >
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSorting(prev => {
+                                        const isDesc = prev[0]?.id === "category" && !prev[0]?.desc;
+                                        return [{ id: "category", desc: isDesc }];
+                                    })}
+                                    className="-ml-4"
+                                >
+                                    Kategori
+                                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </TableHead>
+                            <TableHead >
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSorting(prev => {
+                                        const isDesc = prev[0]?.id === "supplier" && !prev[0]?.desc;
+                                        return [{ id: "supplier", desc: isDesc }];
+                                    })}
+                                    className="-ml-4"
+                                >
+                                    Supplier
+                                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </TableHead>
                             <TableHead>Varian & Harga</TableHead>
                             {/* <TableHead>Stok</TableHead> */}
                         </TableRow>
@@ -218,6 +244,12 @@ export default function LabelPreparePage() {
                                                     </Badge>
                                                 )}
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            {item.masterItemCategory?.name}
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            {item.masterSupplier?.name}
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col gap-1 text-sm">
