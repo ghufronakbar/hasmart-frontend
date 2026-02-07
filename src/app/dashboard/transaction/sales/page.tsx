@@ -56,6 +56,7 @@ import {
 import {
     DataTable,
 } from "@/components/ui/data-table/data-table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import { Separator } from "@/components/ui/separator";
 
@@ -104,6 +105,7 @@ const createSalesSchema = z.object({
     items: z.array(salesItemSchema).min(1, "Minimal 1 item"),
     transactionDate: z.date().optional(), // Optional UI helper, might not be sent if API doesn't support it
     cashReceived: z.coerce.number().min(0, "Jumlah tidak boleh minus"),
+    paymentType: z.enum(["CASH", "DEBIT", "QRIS"]),
 });
 
 type CreateSalesFormValues = z.infer<typeof createSalesSchema>;
@@ -202,6 +204,7 @@ export default function SalesPage() {
             memberCode: "",
             transactionDate: new Date(),
             cashReceived: 0,
+            paymentType: "CASH",
         },
     });
 
@@ -414,6 +417,7 @@ export default function SalesPage() {
                 discounts: item.discounts,
             })),
             cashReceived: values.cashReceived,
+            paymentType: values.paymentType,
         };
 
         if (editingId) {
@@ -468,7 +472,8 @@ export default function SalesPage() {
                     salesPrice: parseFloat(String(item.salesPrice || 0)),
                     discounts: item.transactionSalesDiscounts?.map(d => ({ percentage: parseFloat(d.percentage) })) || []
                 })),
-                cashReceived: parseFloat(sales.cashReceived || "0")
+                cashReceived: parseFloat(sales.cashReceived || "0"),
+                paymentType: (sales.paymentType as "CASH" | "DEBIT" | "QRIS") || "CASH",
             };
             form.reset(formDataVal);
         }
@@ -686,6 +691,47 @@ export default function SalesPage() {
                         <div className="flex-1 overflow-y-auto p-6">
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                                    <div className="flex gap-4 p-4 border rounded-lg bg-slate-50 items-center justify-between">
+                                        <FormField control={form.control} name="paymentType" render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel>Metode Pembayaran</FormLabel>
+                                                <FormControl>
+                                                    <RadioGroup
+                                                        onValueChange={field.onChange}
+                                                        defaultValue={field.value}
+                                                        className="flex flex-row space-x-4"
+                                                    >
+                                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                                            <FormControl>
+                                                                <RadioGroupItem value="CASH" />
+                                                            </FormControl>
+                                                            <FormLabel className="font-normal cursor-pointer">
+                                                                CASH
+                                                            </FormLabel>
+                                                        </FormItem>
+                                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                                            <FormControl>
+                                                                <RadioGroupItem value="DEBIT" />
+                                                            </FormControl>
+                                                            <FormLabel className="font-normal cursor-pointer">
+                                                                DEBIT
+                                                            </FormLabel>
+                                                        </FormItem>
+                                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                                            <FormControl>
+                                                                <RadioGroupItem value="QRIS" />
+                                                            </FormControl>
+                                                            <FormLabel className="font-normal cursor-pointer">
+                                                                QRIS
+                                                            </FormLabel>
+                                                        </FormItem>
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+
                                     {/* Header Info */}
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-4 border rounded-lg bg-slate-50">
 

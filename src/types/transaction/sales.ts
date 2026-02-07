@@ -32,6 +32,7 @@ export interface Sales {
   recordedTotalAmount: string; // Decimal from backend
   cashReceived: string; // Decimal from backend
   cashChange: string; // Decimal from backend
+  paymentType: "CASH" | "DEBIT" | "QRIS";
   masterMember?: Member;
   transactionSalesItems?: SalesItem[]; // Backend relation name
   createdAt: string;
@@ -52,6 +53,7 @@ export interface CreateSalesDTO {
   memberCode?: string | null;
   notes?: string | null;
   cashReceived: number;
+  paymentType: "CASH" | "DEBIT" | "QRIS";
   items: CreateSalesItemDTO[];
 }
 

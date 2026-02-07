@@ -91,6 +91,7 @@ const createSalesSchema = z.object({
     items: z.array(salesItemSchema).min(1, "Belum ada item di keranjang"),
     transactionDate: z.date(),
     cashReceived: z.coerce.number().min(0, "Jumlah tidak boleh minus"),
+    paymentType: z.enum(["CASH", "DEBIT", "QRIS"]),
 });
 
 type CreateSalesFormValues = z.infer<typeof createSalesSchema>;
@@ -138,6 +139,7 @@ export default function PointOfSalesPage() {
             memberCode: "",
             transactionDate: new Date(),
             cashReceived: 0,
+            paymentType: "CASH",
         },
     });
 
@@ -447,6 +449,7 @@ export default function PointOfSalesPage() {
                 discounts: i.discounts
             })),
             cashReceived: values.cashReceived,
+            paymentType: values.paymentType,
         };
 
         createSales(payload, {
@@ -456,8 +459,10 @@ export default function PointOfSalesPage() {
                     notes: "",
                     items: [],
                     memberCode: "",
+                    // transactionDate: new Date(), // removed duplicate
                     transactionDate: new Date(),
                     cashReceived: 0,
+                    paymentType: "CASH",
                 });
                 setMemberVerified(null);
                 setSearchItem("");
@@ -484,49 +489,56 @@ export default function PointOfSalesPage() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-80px)] overflow-hidden gap-4 p-2 bg-muted/20 -m-4 sm:p-4">
+        <div className="flex lg:flex-row flex-col h-[calc(100vh-80px)] overflow-hidden gap-4 p-2 bg-muted/20 -m-4 sm:p-4">
 
             {/* LEFT: Cart / Items */}
             <div className="flex-1 flex flex-col gap-4 min-w-0">
                 {/* Header / Search */}
                 <Card className="flex-none p-4">
-                    <div className="flex flex-col gap-4">
-                        {/* Barcode Scanner Input */}
-                        <div className="relative">
-                            <Input
-                                ref={barcodeInputRef}
-                                placeholder="Scan Barcode / Ketik Kode Variant lalu Enter..."
-                                className="h-12 text-lg font-mono border-primary/50 focus-visible:ring-primary pl-10"
-                                onKeyDown={handleScan}
-                                autoFocus
-                                disabled={isScanning}
-                            />
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                {isScanning ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex flex-col gap-4 w-full">
+                            {/* Barcode Scanner Input */}
+                            <div className="relative">
+                                <Input
+                                    ref={barcodeInputRef}
+                                    placeholder="Scan Barcode / Ketik Kode Variant lalu Enter..."
+                                    className="h-12 text-lg font-mono border-primary/50 focus-visible:ring-primary pl-10"
+                                    onKeyDown={handleScan}
+                                    autoFocus
+                                    disabled={isScanning}
+                                />
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    {isScanning ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <Combobox
+                                        value={0} // Always reset
+                                        onChange={handleAddItem}
+                                        options={itemsList.map(i => ({ id: i.id, name: i.name }))} // Simplified options
+                                        placeholder="Cari Nama Barang (Manual Search)..."
+                                        className="w-full h-10"
+                                        inputValue={searchItem}
+                                        onInputChange={setSearchItem}
+                                        renderLabel={(item) => (
+                                            <div className="flex flex-col text-left">
+                                                <span className="font-semibold">{item.name}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {/* Show base price or variant count? */}
+                                                    Variasi: {itemsList.find(iList => iList.id === item.id)?.masterItemVariants?.length || 0}
+                                                </span>
+                                            </div>
+                                        )}
+                                    />
+                                </div>
                             </div>
                         </div>
-
-                        <div className="flex gap-4">
-                            <div className="flex-1">
-                                <Combobox
-                                    value={0} // Always reset
-                                    onChange={handleAddItem}
-                                    options={itemsList.map(i => ({ id: i.id, name: i.name }))} // Simplified options
-                                    placeholder="Cari Nama Barang (Manual Search)..."
-                                    className="w-full h-10"
-                                    inputValue={searchItem}
-                                    onInputChange={setSearchItem}
-                                    renderLabel={(item) => (
-                                        <div className="flex flex-col text-left">
-                                            <span className="font-semibold">{item.name}</span>
-                                            <span className="text-xs text-muted-foreground">
-                                                {/* Show base price or variant count? */}
-                                                Variasi: {itemsList.find(iList => iList.id === item.id)?.masterItemVariants?.length || 0}
-                                            </span>
-                                        </div>
-                                    )}
-                                />
-                            </div>
+                        <div className="w-fit">
+                            <Button className="w-fit">
+                                Cetak Laporan Hari Ini
+                            </Button>
                         </div>
                     </div>
                 </Card>
@@ -679,7 +691,7 @@ export default function PointOfSalesPage() {
             </div>
 
             {/* RIGHT: Summary & Sidebar */}
-            <div className="w-[320px] md:w-[380px] lg:w-[420px] flex-none flex flex-col gap-4 overflow-hidden">
+            <div className="w-full lg:w-[420px] flex-none flex flex-col gap-4 overflow-hidden">
 
                 {/* Member Card */}
                 <Card className="flex-none">
@@ -770,6 +782,22 @@ export default function PointOfSalesPage() {
                                     className="text-right font-bold text-lg h-10"
                                     {...form.register("cashReceived")}
                                 />
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-xs font-medium text-muted-foreground">Metode Bayar</span>
+                                <Select
+                                    onValueChange={(val) => form.setValue("paymentType", val as "CASH" | "DEBIT" | "QRIS")}
+                                    defaultValue={form.watch("paymentType")}
+                                >
+                                    <SelectTrigger className="w-full text-right font-bold h-10">
+                                        <SelectValue placeholder="Pilih Metode" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="CASH">CASH</SelectItem>
+                                        <SelectItem value="DEBIT">DEBIT</SelectItem>
+                                        <SelectItem value="QRIS">QRIS</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="flex justify-between items-end bg-blue-50 p-2 rounded">
                                 <div className="text-sm font-medium text-blue-800">Kembalian</div>
