@@ -632,6 +632,32 @@ export default function ItemsPage() {
                                     <ArrowUpDown className="ml-2 h-4 w-4" />
                                 </Button>
                             </TableHead>
+                            <TableHead>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSorting(prev => {
+                                        const isDesc = prev[0]?.id === "category" && !prev[0]?.desc;
+                                        return [{ id: "category", desc: isDesc }];
+                                    })}
+                                    className="-ml-4"
+                                >
+                                    Kategori
+                                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSorting(prev => {
+                                        const isDesc = prev[0]?.id === "supplier" && !prev[0]?.desc;
+                                        return [{ id: "supplier", desc: isDesc }];
+                                    })}
+                                    className="-ml-4"
+                                >
+                                    Supplier
+                                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </TableHead>
                             <TableHead>Stok</TableHead>
                             <TableHead>Variant</TableHead>
                             <TableHead>Unit</TableHead>
@@ -683,7 +709,13 @@ export default function ItemsPage() {
                                                         </Badge>
                                                     ) : "-"}
                                                 </TableCell>
-                                                
+                                                <TableCell rowSpan={rowSpan} className="align-top font-medium border-r">
+                                                    {item.masterItemCategory?.name}
+                                                </TableCell>
+                                                <TableCell rowSpan={rowSpan} className="align-top font-medium border-r">
+                                                    {item.masterSupplier?.name}
+                                                </TableCell>
+
                                                 <TableCell rowSpan={rowSpan} className="align-top border-r">
                                                     {item.stock}
                                                 </TableCell>

@@ -5,6 +5,9 @@ export interface FrontStockItem {
   code: string;
   name: string;
   frontStock: number;
+  rearStock: number;
+  supplier: string;
+  category: string;
   unit: string; // derived from main unit or specific front stock unit logic if any
   // Add other fields as return by the backend if known, otherwise keep minimal based on requirements
   masterItemVariants: {

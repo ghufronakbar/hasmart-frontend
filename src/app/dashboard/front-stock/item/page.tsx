@@ -115,6 +115,14 @@ export default function FrontStockPage() {
             header: ({ column }) => <DataTableColumnHeader column={column} title="Nama Barang" />,
         },
         {
+            accessorKey: "supplier",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Supplier" />,
+        },
+        {
+            accessorKey: "category",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Kategori" />,
+        },
+        {
             accessorKey: "frontStock",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Stok Depan" />,
         },
