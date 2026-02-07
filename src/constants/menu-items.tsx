@@ -81,6 +81,7 @@ export const menuItems: MenuItem[] = [
             { title: "Retur Penjualan", href: "/dashboard/transaction/sell-return", access: UserAccess.accessTransactionSellReturnRead },
             { title: "Penyesuaian Stok", href: "/dashboard/transaction/adjust-stock", access: UserAccess.accessTransactionAdjustmentRead },
             { title: "Transfer Stok", href: "/dashboard/transaction/transfer", access: UserAccess.accessTransactionTransferRead },
+            { title: "Kas Keluar Masuk", href: "/dashboard/transaction/cash-flow", access: UserAccess.accessTransactionCashFlowRead },
         ],
     },
     {

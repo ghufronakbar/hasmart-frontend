@@ -122,6 +122,8 @@ const createUserSchema = z.object({
     accessTransactionTransferWrite: z.boolean(),
     accessTransactionAdjustmentRead: z.boolean(),
     accessTransactionAdjustmentWrite: z.boolean(),
+    accessTransactionCashFlowRead: z.boolean(),
+    accessTransactionCashFlowWrite: z.boolean(),
 });
 
 const updateUserAccessSchema = z.object({
@@ -164,6 +166,8 @@ const updateUserAccessSchema = z.object({
     accessTransactionTransferWrite: z.boolean(),
     accessTransactionAdjustmentRead: z.boolean(),
     accessTransactionAdjustmentWrite: z.boolean(),
+    accessTransactionCashFlowRead: z.boolean(),
+    accessTransactionCashFlowWrite: z.boolean(),
 });
 
 const resetPasswordSchema = z.object({
@@ -254,6 +258,8 @@ export default function UsersPage() {
             accessTransactionTransferWrite: false,
             accessTransactionAdjustmentRead: false,
             accessTransactionAdjustmentWrite: false,
+            accessTransactionCashFlowRead: false,
+            accessTransactionCashFlowWrite: false,
         },
     });
 
@@ -294,6 +300,8 @@ export default function UsersPage() {
             accessTransactionTransferWrite: false,
             accessTransactionAdjustmentRead: false,
             accessTransactionAdjustmentWrite: false,
+            accessTransactionCashFlowRead: false,
+            accessTransactionCashFlowWrite: false,
         },
     });
 
@@ -351,6 +359,8 @@ export default function UsersPage() {
                 accessTransactionTransferWrite: false,
                 accessTransactionAdjustmentRead: false,
                 accessTransactionAdjustmentWrite: false,
+                accessTransactionCashFlowRead: false,
+                accessTransactionCashFlowWrite: false,
             });
         }
     };
@@ -404,6 +414,8 @@ export default function UsersPage() {
             accessTransactionTransferWrite: user.accessTransactionTransferWrite,
             accessTransactionAdjustmentRead: user.accessTransactionAdjustmentRead,
             accessTransactionAdjustmentWrite: user.accessTransactionAdjustmentWrite,
+            accessTransactionCashFlowRead: user.accessTransactionCashFlowRead,
+            accessTransactionCashFlowWrite: user.accessTransactionCashFlowWrite,
         });
         setIsUpdateAccessOpen(true);
     }, [updateAccessForm]);
