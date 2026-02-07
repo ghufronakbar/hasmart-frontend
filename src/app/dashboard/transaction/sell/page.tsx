@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray, useWatch, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -87,6 +87,7 @@ import { useBranch } from "@/providers/branch-provider";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useModEnter } from "@/hooks/function/use-mod-enter";
 import { memberService } from "@/services/master/member.service";
+import { itemService } from "@/services/master/item.service";
 import { Member } from "@/types/master/member";
 import { Sell, CreateSellDTO } from "@/types/transaction/sell";
 import { Item, ItemVariant } from "@/types/master/item";
@@ -143,6 +144,11 @@ export default function SellPage() {
     const [searchItem, setSearchItem] = useState("");
     const debouncedSearchItem = useDebounce(searchItem, 200);
 
+    // Barcode Scanning State
+    const barcodeInputRef = useRef<HTMLInputElement>(null);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scannedItems, setScannedItems] = useState<Item[]>([]);
+
     // Date Filter State
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -172,9 +178,9 @@ export default function SellPage() {
     // Merge list items with detail items
     const itemOptions = useMemo(() => {
         const listItems = items?.data || [];
-        if (!editingId || !sellDetail?.data) return listItems;
+        // if (!editingId || !sellDetail?.data) return listItems; // Keep consistent
 
-        const detailItems = sellDetail.data.items?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
+        const detailItems = sellDetail?.data?.items?.map(pi => pi.masterItem).filter((i): i is Item => !!i) || [];
 
         // Use Map to deduplicate by ID
         const map = new Map();
@@ -182,9 +188,12 @@ export default function SellPage() {
         detailItems.forEach(i => {
             if (i && i.id) map.set(i.id, i);
         });
+        scannedItems.forEach(i => {
+            if (i && i.id) map.set(i.id, i);
+        });
 
         return Array.from(map.values());
-    }, [items?.data, sellDetail, editingId]);
+    }, [items?.data, sellDetail, editingId, scannedItems]);
 
     const { mutate: createSell, isPending: isCreating } = useCreateSell();
     const { mutate: updateSell, isPending: isUpdating } = useUpdateSell();
@@ -456,6 +465,90 @@ export default function SellPage() {
         setLastAddedIndex(fields.length);
     }
 
+    // Handle Barcode Scan
+    const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            const code = e.currentTarget.value.trim();
+            if (!code) return;
+
+            e.preventDefault(); // Prevent form submission
+            e.currentTarget.value = ""; // Clear immediately
+            setIsScanning(true);
+
+            try {
+                // Fetch Item by Code
+                const res = await itemService.getItemByCode(code);
+
+                if (res.data) {
+                    const item = res.data;
+
+                    if (!item.isActive) {
+                        toast.error("Item tidak aktif");
+                        return;
+                    }
+
+                    // Get base unit variant or first
+                    const baseVariant = item.masterItemVariants.find(v => v.isBaseUnit)
+                        || item.masterItemVariants[0];
+
+                    if (!baseVariant) {
+                        toast.error("Item tidak memiliki variant");
+                        return;
+                    }
+
+                    // Add to scannedItems so it appears in Combobox options
+                    setScannedItems(prev => {
+                        if (prev.find(i => i.id === item.id)) return prev;
+                        return [...prev, item];
+                    });
+
+                    // Check if item already exists in list (same item & variant)
+                    const currentItems = form.getValues("items");
+                    const existingIndex = currentItems.findIndex(
+                        line => line.masterItemId === item.id && line.masterItemVariantId === baseVariant.id
+                    );
+
+                    if (existingIndex >= 0) {
+                        // Update Qty
+                        const existingItem = currentItems[existingIndex];
+                        const newQty = Number(existingItem.qty) + 1;
+                        form.setValue(`items.${existingIndex}.qty`, newQty);
+
+                        // Highlight/Focus existing row?
+                        setLastAddedIndex(existingIndex);
+                        toast.success(`${item.name} (+1)`);
+                    } else {
+                        // Append new item
+                        // Use recordedSellPrice if available on item (mapped from backend), else 0
+                        const itemWithPrice = item
+                        const sellPrice = parseFloat(itemWithPrice.masterItemVariants.find(v => v.isBaseUnit)?.sellPrice || "0") || 0;
+
+
+                        append({
+                            masterItemId: item.id,
+                            masterItemVariantId: baseVariant.id,
+                            qty: 1,
+                            sellPrice: sellPrice,
+                            discounts: [],
+                        });
+                        setLastAddedIndex(fields.length); // length will be index of new item
+                        toast.success(`${item.name} ditambahkan`);
+                    }
+
+                } else {
+                    toast.error("Item tidak ditemukan");
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error("Kode tidak ditemukan atau terjadi kesalahan");
+            } finally {
+                setIsScanning(false);
+                // Keep focus
+                barcodeInputRef.current?.focus();
+            }
+        }
+    };
+
     // Delete Logic
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const handleDelete = () => {
@@ -713,11 +806,27 @@ export default function SellPage() {
                                     {/* Items Section */}
                                     <div>
                                         <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-lg font-semibold">Item Barang</h3>
+                                            <div className="flex flex-col items-start gap-2">
+                                                <h3 className="text-lg font-semibold">Item Barang</h3>
+                                                <div className="relative">
+                                                    <Input
+                                                        ref={barcodeInputRef}
+                                                        placeholder="Scan Barcode / Ketik Kode Variant lalu Enter..."
+                                                        className="h-10 text-sm font-mono border-primary/50 focus-visible:ring-primary pl-9"
+                                                        onKeyDown={handleScan}
+                                                        disabled={isScanning}
+                                                    />
+                                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                                        {isScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div className="flex flex-col items-end gap-2">
-                                                <Button type="button" size="sm" onClick={handleNewItem}>
-                                                    <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
-                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button type="button" size="sm" onClick={handleNewItem}>
+                                                        <CirclePlus className="mr-2 h-4 w-4" /> Tambah Item
+                                                    </Button>
+                                                </div>
                                                 <span className="text-muted-foreground/80 text-xs ml-2 font-normal">Atau tekan Ctrl+Enter</span>
                                             </div>
                                         </div>

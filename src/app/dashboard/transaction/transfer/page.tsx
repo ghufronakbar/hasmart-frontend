@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +17,8 @@ import {
     X,
     Eye,
 } from "lucide-react";
+import { toast } from "sonner";
+import { itemService } from "@/services/master/item.service";
 import {
     PaginationState,
     useReactTable,
@@ -139,6 +141,10 @@ export default function TransferPage() {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
+
+    // Barcode Scanning State
+    const barcodeInputRef = useRef<HTMLInputElement>(null);
+    const [isScanning, setIsScanning] = useState(false);
 
     // --- Combobox Search States ---
     const [searchItem, setSearchItem] = useState("");
@@ -297,9 +303,83 @@ export default function TransferPage() {
     }, [lastAddedIndex, fields.length]); // Depend on fields.length to wait for render
 
     const handleNewItem = () => {
-        append({ masterItemId: 0, masterItemVariantId: 0, qty: 0 });
+        append({ masterItemId: 0, masterItemVariantId: 0, qty: 1 });
         setLastAddedIndex(fields.length);
     }
+
+    // Handle Barcode Scan
+    const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            const code = e.currentTarget.value.trim();
+            if (!code) return;
+
+            e.preventDefault(); // Prevent form submission
+            e.currentTarget.value = ""; // Clear immediately
+            setIsScanning(true);
+
+            try {
+                // Fetch Item by Code
+                const res = await itemService.getItemByCode(code);
+
+                if (res.data) {
+                    const item = res.data;
+
+                    if (!item.isActive) {
+                        toast.error("Item tidak aktif");
+                        return;
+                    }
+
+                    // Get base unit variant or first
+                    const baseVariant = item.masterItemVariants.find(v => v.isBaseUnit)
+                        || item.masterItemVariants[0];
+
+                    if (!baseVariant) {
+                        toast.error("Item tidak memiliki variant");
+                        return;
+                    }
+
+                    // Add to cache to ensure it's valid for Combobox
+                    setSelectedItemsCache(prev => ({ ...prev, [item.id]: item }));
+
+                    // Check if item already exists in list (same item & variant)
+                    const currentItems = form.getValues("items");
+                    const existingIndex = currentItems.findIndex(
+                        line => line.masterItemId === item.id && line.masterItemVariantId === baseVariant.id
+                    );
+
+                    if (existingIndex >= 0) {
+                        // Update Qty
+                        const existingItem = currentItems[existingIndex];
+                        const newQty = Number(existingItem.qty) + 1;
+                        form.setValue(`items.${existingIndex}.qty`, newQty);
+
+                        // Highlight/Focus existing row?
+                        setLastAddedIndex(existingIndex);
+                        toast.success(`${item.name} (+1)`);
+                    } else {
+                        // Append new item
+                        append({
+                            masterItemId: item.id,
+                            masterItemVariantId: baseVariant.id,
+                            qty: 1
+                        });
+                        setLastAddedIndex(fields.length); // length will be index of new item
+                        toast.success(`${item.name} ditambahkan`);
+                    }
+
+                } else {
+                    toast.error("Item tidak ditemukan");
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error("Kode tidak ditemukan atau terjadi kesalahan");
+            } finally {
+                setIsScanning(false);
+                // Keep focus
+                barcodeInputRef.current?.focus();
+            }
+        }
+    };
 
     // Handlers
     const handleCreate = () => {
@@ -592,12 +672,28 @@ export default function TransferPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <div className="flex items-start justify-between">
-                                        <h4 className="text-sm font-semibold">List Barang</h4>
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex flex-col items-start gap-2">
+                                            <h3 className="text-lg font-semibold">Item Barang</h3>
+                                            <div className="relative">
+                                                <Input
+                                                    ref={barcodeInputRef}
+                                                    placeholder="Scan Barcode / Ketik Kode Variant lalu Enter..."
+                                                    className="h-10 text-sm font-mono border-primary/50 focus-visible:ring-primary pl-9"
+                                                    onKeyDown={handleScan}
+                                                    disabled={isScanning}
+                                                />
+                                                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                                    {isScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div className="flex flex-col items-end gap-2">
-                                            <Button type="button" size="sm" variant="outline" onClick={handleNewItem}>
-                                                <CirclePlus className="mr-2 h-4 w-4" /> Tambah Barang
-                                            </Button>
+                                            <div className="flex gap-2">
+                                                <Button type="button" size="sm" variant="outline" onClick={handleNewItem}>
+                                                    <CirclePlus className="mr-2 h-4 w-4" /> Tambah Barang
+                                                </Button>
+                                            </div>
                                             <span className="text-muted-foreground text-xs ml-2">Atau tekan Ctrl+Enter</span>
                                         </div>
                                     </div>
